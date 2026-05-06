@@ -25,8 +25,12 @@ def parse_args():
     p.add_argument('--conf',   type=float, default=0.35,         help='Confidence threshold')
     p.add_argument('--iou',    type=float, default=0.45,         help='NMS IoU threshold')
     p.add_argument('--output', default=None,                     help='Output video path (optional)')
-    p.add_argument('--skip',   type=int,   default=1,            help='Run inference every N frames')
-    p.add_argument('--no-show',action='store_true',              help='Disable imshow (headless)')
+    p.add_argument('--skip',    type=int,   default=1,            help='Run inference every N frames')
+    p.add_argument('--no-show', action='store_true',             help='Disable imshow (headless)')
+    p.add_argument('--pi-sim',    action='store_true',           help='Resize frames to 640x480 (Pi 4B simulation)')
+    p.add_argument('--contour',   action='store_true',           help='Draw HSV contours instead of bounding boxes')
+    p.add_argument('--speed',     type=int,   default=1,        help='Read every N-th frame (shrinks output duration by N)')
+    p.add_argument('--start-sec', type=float, default=0.0,      help='Seek to this timestamp (seconds) before processing')
     return p.parse_args()
 
 
@@ -36,6 +40,8 @@ def main():
     print(f"[init] model  : {args.model}")
     print(f"[init] imgsz  : {args.imgsz}")
     print(f"[init] conf   : {args.conf}  iou: {args.iou}")
+    print(f"[init] pi_sim : {args.pi_sim}  contour: {args.contour}")
+    print(f"[init] speed  : {args.speed}x  start_sec: {args.start_sec}s")
 
     detector = YoloFireSmokeDetector(
         model_path=args.model,
@@ -50,6 +56,10 @@ def main():
         output_path=args.output,
         show=not args.no_show,
         frame_skip=args.skip,
+        pi_sim=args.pi_sim,
+        contour=args.contour,
+        speed=args.speed,
+        start_sec=args.start_sec,
     )
 
     print(f"\n[result] avg_fps={stats['avg_fps']}  "

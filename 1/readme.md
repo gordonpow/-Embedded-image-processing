@@ -274,9 +274,13 @@ python src/main.py \
 | `--imgsz` | 320 | 推理解析度（正方形邊長） |
 | `--conf`  | 0.35 | 信心閾值，越高越嚴格 |
 | `--iou`   | 0.45 | NMS IoU 閾值 |
-| `--skip`  | 1 | 每 N 幀推理一次（省效能） |
-| `--output` | 無 | 輸出標注影片路徑 |
-| `--no-show` | False | 不顯示視窗（headless） |
+| `--skip`      | 1    | 每 N 幀推理一次（省效能，中間幀延用上次結果） |
+| `--speed`     | 1    | 每 N 幀只讀 1 幀，輸出影片縮為 1/N 長度（快速測試用） |
+| `--start-sec` | 0.0  | 跳轉到指定秒數後開始處理（長片快測用） |
+| `--contour`   | False | 以 HSV 色彩輪廓框選火/煙形狀，取代矩形框 |
+| `--pi-sim`    | False | 強制縮放輸入至 640×480（高解析度來源的 Pi 模擬） |
+| `--output`    | 無   | 輸出標注影片路徑 |
+| `--no-show`   | False | 不顯示視窗（headless） |
 
 ### 效能 Benchmark
 
@@ -343,9 +347,31 @@ python benchmarks/run_benchmark.py \
 
 | 模型版本 | Imgsz | 預估 FPS | 備註 |
 |----------|-------|---------|------|
-| FP32 | 320 | 4–8 | ONNX Runtime ARM |
-| INT8 | 320 | 6–12 | ARM NEON INT8 加速 |
-| FP32 + skip=2 | 320 | 8–16 | 每 2 幀推理 |
+| FP32 | 320 | **~11** | 開發機 ÷10 換算（見 runs/results.md） |
+| FP32 | 416 | ~7 | 低於 10 FPS 目標，不建議 |
+| INT8 | 320 | TBD | x86 結果不可用，需 Pi NEON 實測 |
+| FP32 + skip=2 | 320 | ~20 | 推論每 2 幀一次，顯示仍順暢 |
+
+### Pi 4B 推薦組合（開發機測試驗證）
+
+```bash
+python src/main.py \
+    --video  test_videos/fire.mp4 \
+    --model  models/fire_smoke_yolov8n_320.onnx \
+    --imgsz  320 \
+    --conf   0.35 \
+    --contour \
+    --no-show \
+    --output output.mp4
+# 若 Pi 實測 FPS < 8，加 --skip 2
+```
+
+| 參數 | 選定值 | 理由 |
+|------|--------|------|
+| imgsz | 320 | 416 在 Pi 預估 ~7 FPS，低於目標 |
+| conf | 0.35 | 偵測率與誤報的最佳平衡點 |
+| contour | 開啟 | 僅多 4% 開銷，視覺效果明顯改善 |
+| skip | 1（預設） | Pi 實測若不足再調整 |
 
 ### 模型大小比較
 
@@ -364,8 +390,11 @@ python benchmarks/run_benchmark.py \
 - [x] ONNX 匯出（320 / 416）
 - [x] INT8 量化（FP32 11.58MB → 3.08MB）
 - [x] 偵測 pipeline 實作（前處理 / 推理 / NMS / 視覺化 / FPS）
-- [x] 端對端測試通過（開發機 124 FPS）
+- [x] 端對端測試通過（開發機 118 FPS bbox / 113 FPS contour）
 - [x] 真實火煙影片驗證（2 段，偵測率 24–70%，最高信心 0.916）
+- [x] HSV 輪廓畫法（按火/煙形狀框選，非矩形框）
+- [x] 快速測試旗標（`--speed`、`--start-sec`）+ FPS metadata bug 修復
+- [x] 系統性參數掃描（conf × imgsz × model，詳見 runs/results.md）
 - [ ] Raspberry Pi 4B 實機 benchmark
 - [ ] INT8 量化 Pi 實機加速驗證
 - [ ] 不同光影條件壓力測試

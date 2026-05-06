@@ -15,15 +15,15 @@ sudo apt install -y python3-pip python3-opencv libatlas-base-dev libopenjp2-7 li
 
 ### 2. Python 套件
 
-ONNX Runtime 在 Pi 4B 推薦使用官方 ARM64 wheel：
+使用專為 Pi 準備的 `requirements-pi.txt`（以 `opencv-python-headless` 取代 `opencv-python`，移除 Qt GUI 依賴，Pi headless 環境必要）：
 
 ```bash
 pip install --upgrade pip
-pip install onnxruntime numpy
-pip install opencv-python-headless    # headless 版較輕、無 GUI 依賴
+pip install -r requirements-pi.txt
 ```
 
-> 若需要顯示視窗（imshow），改裝 `opencv-python` 並確認有桌面環境。
+> `requirements.txt`（開發機用）含完整 GUI 支援；Pi headless 請固定使用 `requirements-pi.txt`。
+> 若 Pi 有桌面環境且需 `imshow`，可改執行 `pip install -r requirements.txt`。
 
 ### 3. 傳檔到 Pi
 
@@ -69,17 +69,26 @@ python3 benchmarks/run_benchmark.py \
     --frames 200
 ```
 
-## 預期效能（FP32 ONNX）
+## 預期效能（FP32 ONNX，開發機 ÷10 推算）
 
-| Imgsz | 預期 FPS (Pi 4B 4GB) |
-|-------|----------------------|
-| 320   | 4–8 FPS              |
-| 416   | 2–4 FPS              |
-| 640   | <2 FPS（不建議）     |
+| Imgsz | 畫法 | 預估 FPS (Pi 4B 4GB) | 備註 |
+|-------|------|---------------------|------|
+| 320   | contour | **~11 FPS** ✓     | 推薦，滿足 ≥10 FPS 目標 |
+| 320   | bbox    | ~12 FPS             | 稍快，視覺較差 |
+| 416   | contour | ~7 FPS ✗           | 低於目標，不建議 |
+| 640   | —       | <2 FPS（不建議）    | — |
+
+> 實機數字待 Pi 量測後更新。預估來源：開發機 480p 測試結果 ÷ 10 換算。
 
 ## 優化選項（依需要啟用）
 
-### Option 1：INT8 量化（在開發機做）
+### Option 1：HSV 輪廓畫法（推薦開啟）
+```bash
+python3 src/main.py --video sample.mp4 --imgsz 320 --contour
+# 僅多 4% 開銷，火/煙輪廓更精準
+```
+
+### Option 2：INT8 量化（在開發機做）
 ```python
 # 在開發機執行
 from onnxruntime.quantization import quantize_dynamic, QuantType
@@ -89,14 +98,14 @@ quantize_dynamic(
     weight_type=QuantType.QInt8,
 )
 ```
-再把量化後 ONNX 放到 Pi 上跑，預期 FPS +30~50%。
+再把量化後 ONNX 放到 Pi 上跑，預期 FPS +30~50%（Pi NEON 加速，需實機驗證）。
 
-### Option 2：Frame skip
+### Option 3：Frame skip
 ```bash
 python3 src/main.py --video sample.mp4 --imgsz 320 --skip 2   # 每 2 幀推理一次
 ```
 
-### Option 3：CPU 親和性與優先順序
+### Option 4：CPU 親和性與優先順序
 ```bash
 sudo nice -n -10 taskset -c 0-3 python3 src/main.py ...
 ```
