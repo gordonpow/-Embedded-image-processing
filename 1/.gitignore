@@ -1,5 +1,6 @@
 test_videos/
 models/*.onnx
+!models/*_int8.onnx
 models/*.pt
 __pycache__/
 *.pyc
