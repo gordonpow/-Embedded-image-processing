@@ -26,19 +26,31 @@ class PoseEstimator:
         ransac_thresh: float = 1.0,
         keyframe_min_ratio: float = 0.5,
         keyframe_min_inliers: int = 60,
+        max_angle_per_frame: float = 25.0,
+        smooth_alpha: float = 0.4,
     ) -> None:
         # nlevels=4 reduces descriptor cost on Pi 4B (~30% faster than default 8)
-        self._orb = cv2.ORB_create(nFeatures=nfeatures, nlevels=4)
+        self._orb = cv2.ORB_create(nfeatures=nfeatures, nlevels=4)
         self._matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
         self._ratio_thresh = ratio_thresh
         self._ransac_thresh = ransac_thresh
         self._kf_min_ratio = keyframe_min_ratio
         self._kf_min_inliers = keyframe_min_inliers
+        # Reject single-frame rotation larger than this (noisy E-matrix filter)
+        self._max_angle_rad = math.radians(max_angle_per_frame)
+        # EMA smoothing for output angles
+        self._alpha = smooth_alpha
 
         self._R_global: np.ndarray = np.eye(3, dtype=np.float64)
         self._ref_kp = None
         self._ref_des = None
         self._K: np.ndarray | None = None
+
+        # EMA state for output angles
+        self._yaw_ema   = 0.0
+        self._pitch_ema = 0.0
+        self._roll_ema  = 0.0
+        self._ema_init  = False
 
     # ------------------------------------------------------------------
     # Public API
@@ -51,6 +63,8 @@ class PoseEstimator:
         self._R_global = np.eye(3, dtype=np.float64)
         self._ref_kp = None
         self._ref_des = None
+        self._yaw_ema = self._pitch_ema = self._roll_ema = 0.0
+        self._ema_init = False
 
     @property
     def R_global(self) -> np.ndarray:
@@ -70,15 +84,15 @@ class PoseEstimator:
         kp, des = self._orb.detectAndCompute(gray, None)
         npts = len(kp)
 
-        # Not enough descriptors — set as reference and return identity pose
+        # Not enough descriptors — set as reference and return current pose
         if self._ref_kp is None or des is None or len(des) < 8:
             self._ref_kp, self._ref_des = kp, des
-            yaw, pitch, roll = _rot_to_ypr(self._R_global)
+            yaw, pitch, roll = self._smoothed_angles(-1)
             return yaw, pitch, roll, -1, npts
 
         if self._ref_des is None or len(self._ref_des) < 8:
             self._ref_kp, self._ref_des = kp, des
-            yaw, pitch, roll = _rot_to_ypr(self._R_global)
+            yaw, pitch, roll = self._smoothed_angles(-1)
             return yaw, pitch, roll, -1, npts
 
         # Lowe ratio test
@@ -92,7 +106,7 @@ class PoseEstimator:
 
         if len(good) < 8:
             self._ref_kp, self._ref_des = kp, des
-            yaw, pitch, roll = _rot_to_ypr(self._R_global)
+            yaw, pitch, roll = self._smoothed_angles(-1)
             return yaw, pitch, roll, -1, npts
 
         pts1 = np.float32([self._ref_kp[m.queryIdx].pt for m in good])
@@ -107,21 +121,43 @@ class PoseEstimator:
 
         if E is None or mask is None:
             self._ref_kp, self._ref_des = kp, des
-            yaw, pitch, roll = _rot_to_ypr(self._R_global)
+            yaw, pitch, roll = self._smoothed_angles(-1)
             return yaw, pitch, roll, -1, npts
 
         inlier_count = int(mask.sum())
         inlier_ratio = inlier_count / len(good) if good else 0.0
 
         _, R, _t, _ = cv2.recoverPose(E, pts1, pts2, self._K, mask=mask)
-        self._R_global = self._R_global @ R
+
+        # --- Rotation magnitude gate ---
+        # reject R if it implies an unrealistically large per-frame rotation
+        angle_rad = _rot_angle(R)
+        if angle_rad <= self._max_angle_rad:
+            self._R_global = _orthonormalize(self._R_global @ R)
 
         # Spawn new keyframe when tracking quality degrades
         if inlier_ratio < self._kf_min_ratio or inlier_count < self._kf_min_inliers:
             self._ref_kp, self._ref_des = kp, des
 
-        yaw, pitch, roll = _rot_to_ypr(self._R_global)
+        yaw, pitch, roll = self._smoothed_angles(inlier_count)
         return yaw, pitch, roll, inlier_count, npts
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _smoothed_angles(self, inliers: int) -> tuple[float, float, float]:
+        """Return EMA-smoothed yaw/pitch/roll from current R_global."""
+        yaw, pitch, roll = _rot_to_ypr(self._R_global)
+        if not self._ema_init:
+            self._yaw_ema, self._pitch_ema, self._roll_ema = yaw, pitch, roll
+            self._ema_init = True
+        else:
+            a = self._alpha
+            self._yaw_ema   = a * yaw   + (1 - a) * self._yaw_ema
+            self._pitch_ema = a * pitch + (1 - a) * self._pitch_ema
+            self._roll_ema  = a * roll  + (1 - a) * self._roll_ema
+        return self._yaw_ema, self._pitch_ema, self._roll_ema
 
 
 # ------------------------------------------------------------------
@@ -151,3 +187,19 @@ def _rot_to_ypr(R: np.ndarray) -> tuple[float, float, float]:
         math.degrees(pitch_rad),
         math.degrees(roll_rad),
     )
+
+
+def _rot_angle(R: np.ndarray) -> float:
+    """Rotation angle (radians) of a rotation matrix via trace formula."""
+    cos_theta = (np.trace(R) - 1.0) / 2.0
+    return math.acos(max(-1.0, min(1.0, cos_theta)))
+
+
+def _orthonormalize(R: np.ndarray) -> np.ndarray:
+    """Project R onto SO(3) via SVD to prevent numerical drift."""
+    U, _, Vt = np.linalg.svd(R)
+    R_clean = U @ Vt
+    if np.linalg.det(R_clean) < 0:
+        U[:, -1] *= -1
+        R_clean = U @ Vt
+    return R_clean
