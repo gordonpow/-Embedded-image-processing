@@ -199,7 +199,47 @@ opencv-python >= 4.8.0
 numpy >= 1.24.0
 ```
 
-### 安裝
+### ⚠️ 部署到樹莓派：必要檔案清單
+
+> **只需要以下這些檔案**，不需要安裝 PyTorch / Ultralytics。
+
+```
+📁 你的 Pi 工作目錄（例如 ~/fire_detect/）
+│
+├── 📁 src/
+│   ├── main.py          ← 主程式入口
+│   ├── detector.py      ← 推理核心
+│   ├── pipeline.py      ← 影片迴圈
+│   └── visualize.py     ← 畫框視覺化
+│
+├── 📁 models/
+│   └── fire_smoke_yolov8n_320.onnx   ← 模型本體（必要，11.58 MB）
+│       或 fire_smoke_yolov8n_320_int8.onnx  ← INT8 輕量版（3.08 MB，建議 Pi 用）
+│
+├── 📁 test_videos/
+│   └── （放你要偵測的 .mp4 影片）
+│
+└── requirements.txt     ← 安裝依賴用
+```
+
+| 檔案 | 必要？ | 說明 |
+|------|--------|------|
+| `src/*.py` | ✅ 必要 | 4 個程式碼檔案全部要帶 |
+| `models/fire_smoke_yolov8n_320.onnx` | ✅ 必要 | **模型 = 架構 + 參數，不可缺少** |
+| `requirements.txt` | ✅ 第一次安裝用 | 之後可刪 |
+| `models/*.pt` | ❌ 不需要 | 訓練用，Pi 上不需要 |
+| `export_onnx.py` | ❌ 不需要 | 只在開發機用 |
+| `benchmarks/` | 選填 | 要跑效能測試才需要 |
+
+**傳檔指令（從開發機 scp）：**
+```bash
+scp -r src/ requirements.txt pi@<樹莓派IP>:~/fire_detect/
+scp models/fire_smoke_yolov8n_320_int8.onnx pi@<樹莓派IP>:~/fire_detect/models/
+```
+
+---
+
+### 安裝（在樹莓派上執行）
 
 ```bash
 pip install -r requirements.txt
