@@ -295,11 +295,20 @@ python benchmarks/run_benchmark.py \
 
 ## 七、案例效果展示
 
-### 真實火場影片偵測結果
+> 橘紅色輪廓 = **fire（火焰）**　灰色輪廓 = **smoke（濃煙）**　左上角顯示即時 FPS
+> 畫法：HSV 色彩輪廓（`--contour`），貼合火/煙實際形狀，非矩形框
 
-![偵測效果 GIF](./gif/result_detect.gif)
+### Case 1：test1.mp4（640×480，室外火場）
 
-> 橘紅色框 = **fire（火焰）**　灰色框 = **smoke（濃煙）**　左上角顯示即時 FPS
+| 前段 | 中段 | 後段 |
+|:----:|:----:|:----:|
+| ![test1 前段](./gif/test1_start.gif) | ![test1 中段](./gif/test1_mid.gif) | ![test1 後段](./gif/test1_end.gif) |
+
+### Case 2：test2.mp4（854×480，長時間多光影，從 450 秒起）
+
+| 前段 | 中段 | 後段 |
+|:----:|:----:|:----:|
+| ![test2 前段](./gif/test2_start.gif) | ![test2 中段](./gif/test2_mid.gif) | ![test2 後段](./gif/test2_end.gif) |
 
 ### 案例量化結果
 
