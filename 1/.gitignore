@@ -1,0 +1,7 @@
+test_videos/
+models/*.onnx
+models/*.pt
+__pycache__/
+*.pyc
+output_*.mp4
+benchmarks/*.csv
