@@ -89,15 +89,41 @@ python3 src/main.py --video sample.mp4 --imgsz 320 --contour
 ```
 
 ### Option 2：INT8 量化（在開發機做）
-```python
-# 在開發機執行
-from onnxruntime.quantization import quantize_dynamic, QuantType
-quantize_dynamic(
-    model_input='models/fire_smoke_yolov8n_320.onnx',
-    model_output='models/fire_smoke_yolov8n_320_int8.onnx',
-    weight_type=QuantType.QInt8,
-)
+
+> **⚠️ 請勿使用 `quantize_dynamic` + `QuantType.QInt8`**
+> 會產生 `ConvInteger` 算子，ARM64 CPU 後端沒有此 kernel，
+> Pi 上載入時會拋出 `NOT_IMPLEMENTED` 錯誤導致程式直接 crash。
+> 必須改用 **靜態 QDQ 量化**（產生 `QLinearConv`，ARM 後端原生支援）。
+
+```bash
+cd 1/   # 專案根目錄
+
+# Step 1：從測試影片抽取校正圖（只需做一次）
+python quantize_int8.py --extract-calib \
+    --calib-video test_videos/fire.mp4 \
+    --calib-dir   models/calib_images \
+    --n-frames    30
+
+# Step 2：備份舊的（用 dynamic 量化的）壞模型
+mv models/fire_smoke_yolov8n_320_int8.onnx \
+   models/fire_smoke_yolov8n_320_int8_dynamic_bad.onnx
+
+# Step 3：靜態 QDQ 量化
+python quantize_int8.py \
+    --fp32-onnx models/fire_smoke_yolov8n_320.onnx \
+    --output    models/fire_smoke_yolov8n_320_int8.onnx \
+    --calib-dir models/calib_images \
+    --imgsz     320
+
+# Step 4：開發機本地 sanity check（確認不 crash、能偵測）
+python src/main.py --video test_videos/fire.mp4 \
+    --model models/fire_smoke_yolov8n_320_int8.onnx \
+    --imgsz 320 --conf 0.35
+
+# Step 5：scp 到 Pi
+scp models/fire_smoke_yolov8n_320_int8.onnx pi4@pi4:~/Embedded-image-processing/models/
 ```
+
 再把量化後 ONNX 放到 Pi 上跑，預期 FPS +30~50%（Pi NEON 加速，需實機驗證）。
 
 ### Option 3：Frame skip
@@ -116,7 +142,7 @@ sudo nice -n -10 taskset -c 0-3 python3 src/main.py ...
 |------|------|
 | `onnxruntime.capi._pybind_state.NoSuchFile` | 確認 ONNX 路徑 |
 | GUI 視窗無法顯示 | 改用 `--no-show --output result.mp4` |
-| FPS < 2 | 啟用 INT8 量化 + frame skip |
+| FPS < 2 | 啟用 INT8 量化（使用 `python quantize_int8.py`，見 Option 2）+ frame skip |
 | 推理時 CPU 溫度 > 80°C | 加裝散熱片 / 風扇，或啟用 frame skip |
 | 偵測誤報多 | 提高 `--conf 0.5` |
 
