@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>火災煙霧即時偵測系統 — 課堂介紹</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fire:#ff6b35;--fire-2:#ff9558;--smoke:#7d8597;
+  --bg:#0f1218;--bg-2:#1a1f2b;--panel:#222836;
+  --line:#2e3648;--txt:#e8ecf1;--muted:#9aa3b2;--accent:#ffb454;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);font-family:'Noto Sans TC',sans-serif;scroll-behavior:smooth}
+code,.mono{font-family:'JetBrains Mono',monospace}
+
+/* ── Slide ─────────────────────────────────── */
+.slide{
+  min-height:100vh;width:100%;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:5vh 6vw;position:relative;border-bottom:1px solid var(--line);overflow:hidden;
+}
+.slide::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(700px 400px at 10% 10%,rgba(255,107,53,.07),transparent 60%),
+             radial-gradient(600px 400px at 90% 90%,rgba(125,133,151,.07),transparent 60%);
+  pointer-events:none;
+}
+.slide-num{position:absolute;top:18px;right:24px;font-size:13px;color:var(--muted);letter-spacing:.1em}
+
+/* ── Typography ─────────────────────────────── */
+h2.h{font-weight:900;font-size:clamp(26px,3vw,48px);line-height:1.1;margin-bottom:20px}
+h3.kicker{
+  display:inline-flex;align-items:center;gap:10px;
+  font-size:13px;letter-spacing:.25em;color:var(--fire);text-transform:uppercase;
+  margin-bottom:14px;font-weight:700;
+}
+h3.kicker::before{content:"";display:inline-block;width:28px;height:2px;background:var(--fire)}
+p.lead{font-size:clamp(14px,1.3vw,18px);line-height:1.75;color:#d6dae3;max-width:1000px}
+p.note{font-size:13px;color:var(--muted);margin-top:8px}
+
+/* ── Layout ─────────────────────────────────── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:900px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+
+/* ── Card ────────────────────────────────────── */
+.card{
+  background:linear-gradient(160deg,var(--panel),var(--bg-2));
+  border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,border-color .2s;
+}
+.card:hover{transform:translateY(-3px);border-color:var(--fire)}
+.card .icon{
+  width:42px;height:42px;border-radius:10px;
+  background:rgba(255,107,53,.12);color:var(--fire);
+  display:grid;place-items:center;font-size:21px;margin-bottom:12px;
+}
+.card .icon.smoke{background:rgba(125,133,151,.18);color:#c4cad5}
+.card h4{font-size:17px;font-weight:700;margin-bottom:7px}
+.card p{font-size:13px;color:var(--muted);line-height:1.65}
+
+/* ── Flow box ────────────────────────────────── */
+.flow{
+  background:#101521;border:1px solid var(--line);
+  border-radius:14px;padding:20px;margin:10px 0;
+}
+
+/* ── Step buttons ─────────────────────────────── */
+.step-btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.step-btn{
+  display:flex;align-items:center;gap:8px;
+  padding:9px 16px;border-radius:10px;
+  background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.25);
+  color:var(--fire);font-size:13px;font-weight:700;cursor:pointer;
+  transition:background .18s,border-color .18s,transform .15s;
+  font-family:'Noto Sans TC',sans-serif;
+}
+.step-btn:hover{background:rgba(255,107,53,.22);border-color:var(--fire);transform:translateY(-2px)}
+.step-btn .num{
+  width:24px;height:24px;border-radius:50%;
+  background:var(--fire);color:#fff;display:grid;place-items:center;
+  font-size:12px;flex-shrink:0;
+}
+
+/* ── Modal ───────────────────────────────────── */
+.modal{
+  display:none;position:fixed;inset:0;z-index:200;
+  align-items:center;justify-content:center;
+  background:rgba(0,0,0,.72);backdrop-filter:blur(6px);
+  padding:20px;
+}
+.modal.open{display:flex}
+.modal-inner{
+  background:linear-gradient(160deg,#1e2535,#141921);
+  border:1px solid var(--line);border-radius:18px;
+  padding:32px;width:100%;max-width:700px;
+  max-height:85vh;overflow-y:auto;position:relative;
+}
+.modal-inner h3{
+  font-size:24px;font-weight:900;margin-bottom:16px;
+  color:var(--accent);display:flex;align-items:center;gap:10px;
+}
+.modal-inner p{font-size:15px;line-height:1.8;color:#d6dae3;margin-bottom:12px}
+.modal-inner ul{padding-left:22px;line-height:2;color:#d6dae3;font-size:15px;margin-bottom:12px}
+.modal-inner .close-btn{
+  position:absolute;top:14px;right:16px;
+  background:rgba(255,255,255,.08);border:none;border-radius:50%;
+  width:30px;height:30px;font-size:16px;color:var(--muted);cursor:pointer;
+  display:grid;place-items:center;
+}
+.modal-inner .close-btn:hover{background:rgba(255,107,53,.2);color:var(--fire)}
+.modal-tag{
+  display:inline-block;padding:3px 10px;border-radius:999px;
+  background:rgba(255,107,53,.12);color:var(--fire);font-size:12px;font-weight:700;margin:0 4px 6px 0;
+}
+.modal-tag.gray{background:rgba(255,255,255,.07);color:var(--muted)}
+.modal-inner pre{
+  background:#0a0e14;border:1px solid var(--line);border-radius:8px;
+  padding:14px;font-size:13px;line-height:1.55;color:#cfd5e0;
+  overflow-x:auto;margin:10px 0;
+  font-family:'JetBrains Mono',monospace;
+}
+.modal-inner pre .k{color:#ff9558}
+.modal-inner pre .v{color:#a8d59a}
+.modal-inner pre .c{color:#6c7589}
+.modal-diagram{
+  background:#0d1117;border:1px solid #2e3648;border-radius:10px;
+  padding:14px;margin:12px 0;display:flex;align-items:center;
+  justify-content:space-around;font-size:14px;gap:6px;flex-wrap:wrap;
+}
+.modal-diagram .box{
+  background:#222836;border:1px solid #3d465c;border-radius:8px;
+  padding:10px 14px;text-align:center;font-size:13px;
+}
+.modal-diagram .arrow{color:var(--fire);font-size:18px;font-weight:900}
+
+/* ── Params table ────────────────────────────── */
+table.params{width:100%;border-collapse:collapse;font-size:13px}
+table.params th,table.params td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.params th{color:var(--fire);font-weight:700;font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+table.params td:first-child{font-family:'JetBrains Mono',monospace;color:var(--accent);white-space:nowrap}
+table.params tr:hover td{background:rgba(255,107,53,.04)}
+
+/* ── Stats ───────────────────────────────────── */
+.stat{display:flex;flex-direction:column;gap:4px;padding:18px;border-radius:14px;background:linear-gradient(160deg,var(--panel),var(--bg-2));border:1px solid var(--line)}
+.stat .val{font-size:32px;font-weight:900;color:var(--fire);line-height:1}
+.stat .lbl{font-size:12px;color:var(--muted);letter-spacing:.05em}
+
+/* ── Timeline ────────────────────────────────── */
+.timeline{position:relative;padding-left:26px}
+.timeline::before{content:"";position:absolute;top:0;bottom:0;left:8px;width:2px;background:linear-gradient(180deg,var(--fire),transparent)}
+.timeline-item{position:relative;padding:6px 0 18px 14px}
+.timeline-item::before{content:"";position:absolute;left:-20px;top:12px;width:12px;height:12px;border-radius:50%;background:var(--fire);box-shadow:0 0 0 3px rgba(255,107,53,.18)}
+.timeline-item h5{font-size:16px;font-weight:700;margin-bottom:4px}
+.timeline-item p{font-size:13px;color:var(--muted);line-height:1.65}
+
+/* ── GIF grid ────────────────────────────────── */
+.gif-wrap{border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#0a0e14;aspect-ratio:16/9}
+.gif-wrap img{width:100%;height:100%;object-fit:contain;display:block}
+.gif-caption{font-size:12px;color:var(--muted);margin-top:6px;text-align:center}
+.gif-carousel{position:relative}
+.gif-carousel .frames img{width:100%;display:none}
+.gif-carousel .frames img.active{display:block}
+.gif-carousel .dots{display:flex;justify-content:center;gap:6px;margin-top:8px}
+.gif-carousel .dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--line);cursor:pointer;border:none;
+}
+.gif-carousel .dot.active{background:var(--fire)}
+
+/* ── Step circle ─────────────────────────────── */
+.step-circle{
+  width:38px;height:38px;border-radius:50%;background:var(--fire);color:white;
+  display:grid;place-items:center;font-weight:900;font-size:16px;flex-shrink:0;
+}
+
+/* ── Nav ─────────────────────────────────────── */
+.nav{
+  position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  z-index:50;display:flex;gap:8px;align-items:center;
+  background:rgba(15,18,24,.88);backdrop-filter:blur(10px);
+  border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:12px;color:var(--muted);
+}
+.nav button{
+  background:transparent;color:var(--txt);border:none;cursor:pointer;
+  padding:4px 10px;border-radius:999px;font-size:13px;
+}
+.nav button:hover{background:rgba(255,107,53,.18);color:var(--fire)}
+.progress{position:fixed;top:0;left:0;right:0;height:3px;z-index:60}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--fire),var(--accent));width:0;transition:width .2s}
+.keycap{
+  display:inline-block;padding:2px 7px;border-radius:5px;
+  background:#2c3344;border:1px solid #3d465c;border-bottom-width:2px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:#c4cad5;
+}
+.pill{display:inline-block;padding:4px 12px;border-radius:999px;background:rgba(255,107,53,.12);color:var(--fire);font-size:12px;font-weight:600;margin:3px}
+.pill.gray{background:rgba(255,255,255,.06);color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="progress"><div class="progress-bar" id="pbar"></div></div>
+
+<!-- ═══════════════════════════════════════════
+     01 / 08  技術工具
+══════════════════════════════════════════════ -->
+<section class="slide" id="s1">
+  <span class="slide-num">01 / 08</span>
+  <h3 class="kicker">用了什麼技術 / 工具</h3>
+  <h2 class="h">這個專案的「材料清單」</h2>
+  <div class="grid-3" style="margin-top:10px">
+    <div class="card">
+      <div class="icon">🎯</div>
+      <h4>YOLOv8</h4>
+      <p><strong>AI 偵測模型本人</strong>。YOLO = You Only Look Once，「一眼看完整張圖」。預先用大量火災照片訓練過，已經「知道」火和煙長什麼樣。</p>
+    </div>
+    <div class="card">
+      <div class="icon">⚙️</div>
+      <h4>ONNX Runtime</h4>
+      <p><strong>AI 模型的執行引擎</strong>。把訓練好的模型轉成「通用格式 ONNX」，就能在任何電腦（Windows、Pi、手機）上跑，不需要 GPU。</p>
+    </div>
+    <div class="card">
+      <div class="icon">🖼️</div>
+      <h4>OpenCV</h4>
+      <p><strong>影像處理瑞士刀</strong>。負責讀影片、縮放、色彩轉換、畫框畫線、存檔——所有「跟畫面有關的事」都靠它。</p>
+    </div>
+    <div class="card">
+      <div class="icon">🐍</div>
+      <h4>Python</h4>
+      <p><strong>程式語言</strong>。把上面三個工具串在一起的「膠水」。語法簡單，AI 圈的主流語言。</p>
+    </div>
+    <div class="card">
+      <div class="icon smoke">🥧</div>
+      <h4>Raspberry Pi 4B</h4>
+      <p><strong>運算硬體</strong>。一台跟信用卡差不多大的小電腦（約 1500 元台幣）。整套系統最終跑在它上面，不需要網路。</p>
+    </div>
+    <div class="card">
+      <div class="icon smoke">📦</div>
+      <h4>INT8 量化</h4>
+      <p><strong>模型壓縮技術</strong>。把 AI 模型「縮小 4 倍」，讓便宜的小電腦也跑得動。壓縮過程有踩坑，後面會講。</p>
+    </div>
+  </div>
+  <p class="note" style="margin-top:18px">按 <span class="keycap">↓</span> <span class="keycap">Space</span> 下一頁 ・ <span class="keycap">↑</span> 上一頁</p>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     02 / 08  系統拆分
+══════════════════════════════════════════════ -->
+<section class="slide" id="s2">
+  <span class="slide-num">02 / 08</span>
+  <h3 class="kicker">系統拆分</h3>
+  <h2 class="h">整個程式 = 4 個檔案分工合作<br><span style="font-size:0.55em;color:var(--muted);font-weight:400">想像一間餐廳</span></h2>
+  <div class="grid-4" style="margin-top:16px">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span class="step-circle">1</span>
+        <code style="color:var(--accent);font-size:13px">main.py</code>
+      </div>
+      <h4 style="font-size:15px">👔 經理</h4>
+      <p>收顧客指令（命令列參數）、決定用哪個模型、把整個廚房開起來。</p>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span class="step-circle">2</span>
+        <code style="color:var(--accent);font-size:13px">pipeline.py</code>
+      </div>
+      <h4 style="font-size:15px">🍳 出餐主控</h4>
+      <p>一張一張「上菜」（讀影片每一幀）給 AI，控制整個迴圈節奏、算 FPS。</p>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span class="step-circle">3</span>
+        <code style="color:var(--accent);font-size:13px">detector.py</code>
+      </div>
+      <h4 style="font-size:15px">🧠 主廚（AI 大腦）</h4>
+      <p>真正執行 AI 推論。把畫面「煮」過一遍後，回傳哪裡是火、哪裡是煙、有多確定。</p>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span class="step-circle">4</span>
+        <code style="color:var(--accent);font-size:13px">visualize.py</code>
+      </div>
+      <h4 style="font-size:15px">🎨 擺盤師</h4>
+      <p>把 AI 找出來的位置，用框框或顏色輪廓畫到原始影片上，端給使用者看。</p>
+    </div>
+  </div>
+  <div class="flow" style="margin-top:24px">
+    <div class="mermaid" style="text-align:center">
+flowchart LR
+  A([🎥 影片]) --> M[main.py<br>啟動系統]
+  M --> P[pipeline.py<br>主迴圈]
+  P -->|每一幀| D[detector.py<br>AI 推論]
+  D -->|偵測結果| V[visualize.py<br>畫框/輪廓]
+  V --> P
+  P --> OUT([📺 輸出])
+  style D fill:#ff6b35,stroke:#ffb454,color:#fff,stroke-width:3px
+  style M fill:#222836,stroke:#ff9558,color:#fff
+  style P fill:#222836,stroke:#ff9558,color:#fff
+  style V fill:#222836,stroke:#ff9558,color:#fff
+    </div>
+  </div>
+  <p class="note">這種「分工」叫做<strong style="color:var(--accent)">模組化（Modularization）</strong>——要修改哪個功能就改哪個檔案，互不干擾。</p>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     03 / 08  detector.py 內部 ★ 可點擊 ★
+══════════════════════════════════════════════ -->
+<section class="slide" id="s3">
+  <span class="slide-num">03 / 08</span>
+  <h3 class="kicker">AI 大腦 — detector.py</h3>
+  <h2 class="h">一張畫面進去，偵測結果出來<br><span style="font-size:0.5em;color:var(--muted);font-weight:400">👇 點擊任一步驟，看詳細說明</span></h2>
+  <div class="flow">
+    <div class="mermaid" style="text-align:center">
+flowchart LR
+  A[原始畫面<br>640×480] -->|① Letterbox| B[320×320<br>正方形]
+  B -->|② Preprocess| C[數字矩陣<br>Tensor]
+  C -->|③ ONNX 推論| D[2100 個<br>候選框]
+  D -->|④ 信心度過濾| E[5~30 個<br>框]
+  E -->|⑤ NMS 去重疊| F[最終<br>偵測框]
+  F -->|⑥ 座標換算| G[回到<br>原畫面座標]
+  style D fill:#ff6b35,stroke:#ffb454,color:#fff,stroke-width:3px
+  style A fill:#222836,stroke:#7d8597,color:#fff
+  style G fill:#222836,stroke:#ff9558,color:#fff
+    </div>
+  </div>
+  <div class="step-btns">
+    <button class="step-btn" data-modal="m-lb"><span class="num">①</span> Letterbox 等比縮放</button>
+    <button class="step-btn" data-modal="m-pre"><span class="num">②</span> Preprocess 前處理</button>
+    <button class="step-btn" data-modal="m-onnx"><span class="num">③</span> ONNX 推論</button>
+    <button class="step-btn" data-modal="m-conf"><span class="num">④</span> 信心度過濾</button>
+    <button class="step-btn" data-modal="m-nms"><span class="num">⑤</span> NMS 去重疊</button>
+    <button class="step-btn" data-modal="m-coord"><span class="num">⑥</span> 座標換算</button>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     04 / 08  pipeline.py 主迴圈 ★ 可點擊 ★
+══════════════════════════════════════════════ -->
+<section class="slide" id="s4">
+  <span class="slide-num">04 / 08</span>
+  <h3 class="kicker">主迴圈 — pipeline.py</h3>
+  <h2 class="h">影片一幀一幀地被處理<br><span style="font-size:0.5em;color:var(--muted);font-weight:400">👇 點擊任一步驟，看詳細說明</span></h2>
+  <div class="flow">
+    <div class="mermaid" style="text-align:center">
+flowchart TB
+  S([開啟影片]) --> R[讀取一幀]
+  R --> SK{跳幀<br>skip?}
+  SK -->|推論幀| DE[呼叫 detector]
+  SK -->|跳過幀| RE[沿用上次結果]
+  DE --> DR{畫哪種?}
+  RE --> DR
+  DR -->|--contour| CO[HSV 輪廓]
+  DR -->|預設| BB[Bounding Box]
+  CO --> FP[計算 FPS]
+  BB --> FP
+  FP --> WR[寫入 mp4]
+  WR --> SH[顯示視窗]
+  SH --> R
+  style DE fill:#ff6b35,stroke:#ffb454,color:#fff,stroke-width:3px
+    </div>
+  </div>
+  <div class="step-btns">
+    <button class="step-btn" data-modal="p-open"><span class="num">①</span> 開啟影片 + 跳秒</button>
+    <button class="step-btn" data-modal="p-speed"><span class="num">②</span> Speed 加速讀取</button>
+    <button class="step-btn" data-modal="p-pisim"><span class="num">③</span> Pi 模擬縮放</button>
+    <button class="step-btn" data-modal="p-skip"><span class="num">④</span> 跳幀推論</button>
+    <button class="step-btn" data-modal="p-ema"><span class="num">⑤</span> EMA FPS 平滑</button>
+    <button class="step-btn" data-modal="p-out"><span class="num">⑥</span> 輸出與顯示</button>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     05 / 08  兩種畫法對比 + 真實 GIF
+══════════════════════════════════════════════ -->
+<section class="slide" id="s5">
+  <span class="slide-num">05 / 08</span>
+  <h3 class="kicker">兩種視覺化方式</h3>
+  <h2 class="h">同一個偵測結果，兩種畫法</h2>
+  <div class="grid-2" style="margin-top:16px;align-items:start">
+
+    <!-- 左：BBox -->
+    <div>
+      <h4 style="font-size:16px;font-weight:700;margin-bottom:10px">📏 Bounding Box <span class="pill gray" style="font-size:11px">預設</span></h4>
+      <div class="gif-wrap">
+        <img src="gif/result_detect.gif" alt="只有煙霧框框" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div style="display:none;height:200px;align-items:center;justify-content:center;color:var(--muted);font-size:13px">gif/result_detect.gif</div>
+      </div>
+      <p class="gif-caption">煙霧偵測 ・ 矩形框畫法 ・ 紅框 = fire ／ 灰框 = smoke</p>
+      <div class="card" style="margin-top:12px">
+        <p style="font-size:13px;line-height:1.75">
+          最簡單的畫法：用「最小可包圍的矩形」圈住 AI 認定是火/煙的區域。
+          快速、直覺，但方框不能表達火焰的真實形狀。
+        </p>
+      </div>
+    </div>
+
+    <!-- 右：Contour + 輪播 -->
+    <div>
+      <h4 style="font-size:16px;font-weight:700;margin-bottom:10px">🔥 Contour <span class="pill" style="font-size:11px">--contour</span></h4>
+      <div class="gif-carousel">
+        <div class="gif-wrap frames" id="contourFrames">
+          <img src="gif/test1_start.gif" class="active" alt="煙霧 contour 前段">
+          <img src="gif/test1_mid.gif"   alt="煙霧 contour 中段">
+          <img src="gif/test1_end.gif"   alt="火+煙 contour 後段">
+          <img src="gif/test2_start.gif" alt="火+煙 真實區域">
+        </div>
+        <div class="dots" id="contourDots">
+          <button class="dot active" data-i="0"></button>
+          <button class="dot" data-i="1"></button>
+          <button class="dot" data-i="2"></button>
+          <button class="dot" data-i="3"></button>
+        </div>
+        <div style="display:flex;gap:6px;justify-content:center;margin-top:6px;font-size:11px;color:var(--muted)" id="contourLabel">
+          煙霧顏色輪廓（test1 前段）
+        </div>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <p style="font-size:13px;line-height:1.75">
+          在 YOLO 框框內，用 <strong style="color:var(--fire)">HSV 色彩空間</strong> 分析找出火焰橘紅色 / 煙霧灰白色的像素，
+          再用 OpenCV 描出真實輪廓——貼合形狀，僅多 <strong>4%</strong> 運算成本。
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h4 style="font-size:14px;margin-bottom:6px">HSV 顏色範圍（visualize.py 定義）</h4>
+    <p style="font-size:13px;line-height:2">
+      🔥 <strong>fire</strong>：色相 0–35（黃→橘）＋ 160–180（紅），飽和度 ≥ 100，亮度 ≥ 100<br>
+      💨 <strong>smoke</strong>：色相不限，飽和度 &lt; 60（灰白色），亮度 ≥ 80<br>
+      ⚠️ 若 HSV 抓不到（夜景 / 黑煙）→ <strong style="color:var(--accent)">自動退回方框</strong>，不會空白
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     06 / 08  開發歷程
+══════════════════════════════════════════════ -->
+<section class="slide" id="s6">
+  <span class="slide-num">06 / 08</span>
+  <h3 class="kicker">開發歷程</h3>
+  <h2 class="h">從零到部署，走過的七個關卡</h2>
+  <div class="timeline" style="margin-top:14px;font-size:14px">
+    <div class="timeline-item">
+      <h5>① 找模型 ・ 不從零訓練</h5>
+      <p>使用 GitHub 上已用大量火災照片訓練好的 YOLOv8n 權重（.pt 檔）。省掉數週訓練時間。</p>
+    </div>
+    <div class="timeline-item">
+      <h5>② 匯出 ONNX 通用格式</h5>
+      <p>PyTorch 格式 (.pt) 只能在有 PyTorch 的電腦上跑。轉成 ONNX 後，Pi 只需安裝 onnxruntime，不需要 PyTorch（省記憶體、省空間）。</p>
+    </div>
+    <div class="timeline-item">
+      <h5>③ 開發機驗證</h5>
+      <p>先在 Windows + RTX 顯卡跑通，確認偵測正確、速度超過 100 FPS。</p>
+    </div>
+    <div class="timeline-item">
+      <h5>④ 部署 Raspberry Pi 4B</h5>
+      <p>安裝 onnxruntime + opencv-headless（無桌面版本），FP32 模型在 Pi 上約 <strong>11 FPS</strong>，勉強達標。</p>
+    </div>
+    <div class="timeline-item">
+      <h5>⑤ INT8 量化（踩坑）</h5>
+      <p>想加速 → 用 <code class="mono" style="color:var(--accent)">quantize_dynamic</code> 把模型壓縮 4 倍。結果 Pi 直接報錯：「ARM CPU 不支援 ConvInteger 算子」。模型一個都跑不了。</p>
+    </div>
+    <div class="timeline-item">
+      <h5>⑥ 改用 QDQ 靜態量化（解決）</h5>
+      <p>改用 <code class="mono" style="color:var(--accent)">quantize_static + QDQ + per_channel=False</code>，產生 ARM 相容的 QLinearConv 算子。Pi 上順利跑起來，FPS 提升至 <strong>~14</strong>。</p>
+    </div>
+    <div class="timeline-item">
+      <h5>⑦ 視覺化升級</h5>
+      <p>加入 <code class="mono" style="color:var(--accent)">--contour</code>，HSV 色彩分析讓標示貼合火焰真實形狀，只多 4% 運算成本。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     07 / 08  參數一覽
+══════════════════════════════════════════════ -->
+<section class="slide" id="s7">
+  <span class="slide-num">07 / 08</span>
+  <h3 class="kicker">執行參數</h3>
+  <h2 class="h">使用者可以調的 12 個旋鈕</h2>
+  <table class="params">
+    <thead><tr><th style="width:13%">參數</th><th style="width:12%">預設</th><th>白話文說明</th></tr></thead>
+    <tbody>
+      <tr><td>--video</td><td><span class="pill gray" style="font-size:11px">必填</span></td><td>要處理的影片檔路徑</td></tr>
+      <tr><td>--model</td><td>...320.onnx</td><td>使用哪個 AI 模型（FP32 精準版 or INT8 加速版）</td></tr>
+      <tr><td>--imgsz</td><td>320</td><td>把畫面縮成幾乘幾再推論。<strong>越大越準但越慢</strong>（建議 Pi 用 320）</td></tr>
+      <tr><td>--conf</td><td>0.35</td><td>信心門檻。AI 至少要有 35% 把握才算數。調高 → 誤報少；調低 → 更敏感</td></tr>
+      <tr><td>--iou</td><td>0.45</td><td>NMS 去重疊的容忍度，兩框重疊超過 45% 就合併。一般不用改</td></tr>
+      <tr><td>--skip</td><td>1</td><td>每 N 幀才推論一次，其他幀沿用結果。Pi 效能不足時設 2 或 3</td></tr>
+      <tr><td>--contour</td><td>關閉</td><td>開啟「貼合形狀的 HSV 輪廓」畫法（取代矩形框）</td></tr>
+      <tr><td>--pi-sim</td><td>關閉</td><td>把畫面強制縮到 640×480，模擬 Pi Camera 解析度（開發機測試用）</td></tr>
+      <tr><td>--speed</td><td>1</td><td>每 N 幀只讀 1 幀，輸出影片時長縮為 1/N（測試長影片時用）</td></tr>
+      <tr><td>--start-sec</td><td>0</td><td>從影片第幾秒開始播（跳過不必要的開頭）</td></tr>
+      <tr><td>--output</td><td>無</td><td>把偵測後的影片存到這個路徑（如 output.mp4）</td></tr>
+      <tr><td>--no-show</td><td>關閉</td><td>不開預覽視窗（Pi 用 SSH 遠端時必要）</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     08 / 08  效能數據
+══════════════════════════════════════════════ -->
+<section class="slide" id="s8">
+  <span class="slide-num">08 / 08</span>
+  <h3 class="kicker">效能數據</h3>
+  <h2 class="h">不同設定下能跑多快？</h2>
+  <div class="grid-4" style="margin-top:12px">
+    <div class="stat"><span class="val">119</span><span class="lbl">開發機 ・ FP32 ・ 320</span></div>
+    <div class="stat"><span class="val">70</span><span class="lbl">開發機 ・ FP32 ・ 416</span></div>
+    <div class="stat"><span class="val">~11</span><span class="lbl">Pi 4B ・ FP32 ・ 320</span></div>
+    <div class="stat"><span class="val">~14</span><span class="lbl">Pi 4B ・ INT8 ・ 320</span></div>
+  </div>
+  <p class="note" style="margin-top:8px">單位：FPS（每秒幾幀）。人眼覺得「流暢」的下限約 10 FPS。</p>
+  <div class="grid-2" style="margin-top:20px">
+    <div class="card">
+      <h4>📊 從這些數字學到什麼？</h4>
+      <p style="line-height:2">
+        ・ 桌機跑 320 → 119 FPS，遠超即時需求<br>
+        ・ Pi 跑同設定 → 11 FPS，算力約桌機的 1/10<br>
+        ・ INT8 量化後 → ~14 FPS（+30%），對 Pi 是明顯提升<br>
+        ・ 416 解析度在 Pi 上僅 7 FPS，低於目標，不建議
+      </p>
+    </div>
+    <div class="card">
+      <h4>🎯 為什麼目標定在「10 FPS 以上」？</h4>
+      <p style="line-height:2">
+        低於 10 FPS 會看起來卡頓、像慢動作。火災偵測不需要電玩等級的 60 FPS，
+        但至少 10 FPS 才能即時追蹤火勢蔓延方向。
+        FP32 模型在 Pi 上剛好達標（~11），INT8 則多了安全餘量（~14）。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     NAV
+══════════════════════════════════════════════ -->
+<div class="nav">
+  <button onclick="prevSlide()">← 上一頁</button>
+  <span id="counter">1 / 8</span>
+  <button onclick="nextSlide()">下一頁 →</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MODALS  — detector.py
+══════════════════════════════════════════════ -->
+
+<!-- ① Letterbox -->
+<div class="modal" id="m-lb">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>① Letterbox 等比縮放</h3>
+    <p>AI 模型只吃 <strong style="color:var(--fire)">320 × 320 的正方形圖</strong>，但影片通常是 640×480 的長方形——如果直接硬縮，火焰會被壓扁變形，AI 就認不出來了。</p>
+    <p><strong>解法：等比縮放 + 灰邊填滿（像電影院的 letterbox 黑邊）</strong></p>
+    <div class="modal-diagram">
+      <div class="box">原始畫面<br>640 × 480</div>
+      <div class="arrow">→</div>
+      <div class="box">等比縮放<br>320 × 240<br><span style="color:var(--muted);font-size:11px">比例不變</span></div>
+      <div class="arrow">→</div>
+      <div class="box" style="border-color:var(--fire)">加灰邊<br>320 × <span style="color:var(--fire)">320</span><br><span style="color:var(--muted);font-size:11px">上下各 40px</span></div>
+    </div>
+    <p>之後推論得到的框框座標，也要把灰邊「扣掉」、再換算回原始尺寸，才能在影片上畫在正確位置。</p>
+    <pre><span class="c"># detector.py 內的 _letterbox()  核心邏輯</span>
+scale = <span class="k">320</span> / max(h, w)          <span class="c"># 縮放比例</span>
+nh, nw = h * scale, w * scale    <span class="c"># 縮後高寬</span>
+dw = (320 - nw) / 2              <span class="c"># 左右各填這麼多灰</span>
+dh = (320 - nh) / 2              <span class="c"># 上下各填這麼多灰</span></pre>
+  </div>
+</div>
+
+<!-- ② Preprocess -->
+<div class="modal" id="m-pre">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>② Preprocess 前處理</h3>
+    <p>把畫面轉成 AI 模型「看得懂」的數字格式。共三個動作：</p>
+    <ul>
+      <li><strong style="color:var(--fire)">BGR → RGB</strong>：OpenCV 讀進來的畫面色彩順序是藍-綠-紅（BGR），但 AI 訓練時用紅-綠-藍（RGB）。不換的話顏色辨識會全錯。</li>
+      <li><strong style="color:var(--fire)">÷ 255</strong>：像素值原本是 0–255 的整數，AI 喜歡 0–1 的小數。把所有數值除以 255，讓模型計算更穩定。</li>
+      <li><strong style="color:var(--fire)">HWC → NCHW</strong>：OpenCV 的格式是「高×寬×通道（HWC）」，AI 模型要的是「批次×通道×高×寬（NCHW）」——用 NumPy 轉置，再加一個 batch 維度。</li>
+    </ul>
+    <div class="modal-diagram">
+      <div class="box">BGR 畫面<br>[320,320,3]<br>值 0–255</div>
+      <div class="arrow">→</div>
+      <div class="box">RGB / ÷255<br>[320,320,3]<br>值 0–1</div>
+      <div class="arrow">→</div>
+      <div class="box" style="border-color:var(--fire)">NCHW<br>[1,3,320,320]<br>送進模型</div>
+    </div>
+    <pre><span class="c"># detector.py  _preprocess()</span>
+rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32) / <span class="k">255.0</span>
+tensor = np.expand_dims(rgb.transpose(<span class="k">2,0,1</span>), <span class="k">0</span>)  <span class="c"># NCHW</span></pre>
+  </div>
+</div>
+
+<!-- ③ ONNX 推論 -->
+<div class="modal" id="m-onnx">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>③ ONNX 模型推論</h3>
+    <p>把前處理好的 Tensor 丟給 ONNX Runtime，等它算完後取回結果。這步是整個流程最耗時的部分。</p>
+    <ul>
+      <li><strong>輸入形狀</strong>：<code>[1, 3, 320, 320]</code>（1張圖 × 3色彩通道 × 320×320 像素）</li>
+      <li><strong>輸出形狀</strong>：<code>[1, 6, 2100]</code>（2100 個候選框 × 每框 6 個數字）</li>
+    </ul>
+    <p>2100 個候選框是怎麼來的？YOLOv8 把 320×320 的圖分成不同大小的格子（20×20、40×40、80×80），每個格子預測幾個框，加起來剛好是 2100。</p>
+    <div class="modal-diagram">
+      <div class="box">輸入<br>[1,3,320,320]</div>
+      <div class="arrow">→</div>
+      <div class="box" style="border-color:var(--fire)">YOLOv8<br>ONNX 推論<br><span style="color:var(--muted);font-size:11px">~90ms on Pi</span></div>
+      <div class="arrow">→</div>
+      <div class="box">輸出<br>[1,6,2100]<br>cx cy w h fire smoke</div>
+    </div>
+    <p style="margin-top:8px">每個候選框的 6 個數字：前 4 個是位置（中心 x, 中心 y, 寬, 高），後 2 個是「這裡是 fire 的機率」和「這裡是 smoke 的機率」。</p>
+  </div>
+</div>
+
+<!-- ④ 信心度過濾 -->
+<div class="modal" id="m-conf">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>④ 信心度過濾（Confidence Filter）</h3>
+    <p>2100 個候選框裡，絕大多數 AI 自己也沒把握——例如天空、地面、牆壁上也會有低分候選框。</p>
+    <p><strong>過濾規則</strong>：取每個框的 fire 分數和 smoke 分數中的<strong style="color:var(--fire)">較大值</strong>，若低於 <code>--conf</code>（預設 0.35）就丟掉。</p>
+    <div class="modal-diagram">
+      <div class="box">2100 個框</div>
+      <div class="arrow">→</div>
+      <div class="box" style="border-color:var(--fire)">信心 ≥ 0.35<br>才保留</div>
+      <div class="arrow">→</div>
+      <div class="box">剩 5–30 個</div>
+    </div>
+    <ul>
+      <li>調低 <code>--conf</code>（如 0.25）→ 更多框通過，偵測更積極，但可能誤報</li>
+      <li>調高 <code>--conf</code>（如 0.45）→ 更少框，偵測更保守，漏報較少</li>
+      <li>對 FPS 的影響幾乎可忽略（&lt;2%）</li>
+    </ul>
+    <pre><span class="c"># detector.py  _postprocess()</span>
+confidences = scores.max(axis=<span class="k">1</span>)          <span class="c"># fire 和 smoke 取較大值</span>
+mask = confidences &gt;= self.conf_thres      <span class="c"># 低於門檻的直接去掉</span></pre>
+  </div>
+</div>
+
+<!-- ⑤ NMS -->
+<div class="modal" id="m-nms">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>⑤ NMS 去重疊（Non-Maximum Suppression）</h3>
+    <p>信心度過濾後，還剩十幾個框，但 AI 常對<strong>同一個火焰畫好幾個重疊的框</strong>。NMS 的任務是只留最好的那一個。</p>
+    <p><strong>NMS 步驟：</strong></p>
+    <ul>
+      <li>1. 按信心度由高到低排序</li>
+      <li>2. 從信心最高的框開始，計算它和其他框的<strong>重疊比例（IoU）</strong></li>
+      <li>3. 重疊超過 <code>--iou</code>（預設 0.45）的框 → 刪掉（認為是同一個物體的重複偵測）</li>
+      <li>4. 對剩下的框重複 2-3 步驟</li>
+    </ul>
+    <p><strong>IoU（Intersection over Union）</strong>：兩個框交集面積 ÷ 聯集面積。IoU = 1 代表完全重疊，= 0 代表完全不重疊。</p>
+    <div class="modal-diagram">
+      <div class="box">10 個框<br>互相重疊</div>
+      <div class="arrow">→</div>
+      <div class="box" style="border-color:var(--fire)">NMS<br>IoU ≥ 0.45<br>合併</div>
+      <div class="arrow">→</div>
+      <div class="box">2–3 個框<br>乾淨不重疊</div>
+    </div>
+    <p>NMS 是<strong>逐類別</strong>執行的——fire 的框和 smoke 的框不會互相干擾。</p>
+  </div>
+</div>
+
+<!-- ⑥ 座標換算 -->
+<div class="modal" id="m-coord">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>⑥ 座標換算（回到原畫面）</h3>
+    <p>AI 推論在 320×320 的空間做，但框要畫在原始影片（如 640×480）上。需要三步驟還原：</p>
+    <ul>
+      <li><strong style="color:var(--fire)">1. 減去 letterbox padding</strong>：上下或左右的灰邊偏移量要扣掉</li>
+      <li><strong style="color:var(--fire)">2. 除以縮放比例</strong>：把 320 空間的座標放大回原始尺寸</li>
+      <li><strong style="color:var(--fire)">3. clip 限制範圍</strong>：防止框超出畫面邊界（負值或超過寬高）</li>
+    </ul>
+    <div class="modal-diagram">
+      <div class="box">框在<br>320×320<br>空間</div>
+      <div class="arrow">→</div>
+      <div class="box">扣掉<br>padding</div>
+      <div class="arrow">→</div>
+      <div class="box">÷ scale<br>放大回去</div>
+      <div class="arrow">→</div>
+      <div class="box" style="border-color:var(--fire)">框在<br>640×480<br>原始空間</div>
+    </div>
+    <pre><span class="c"># 扣掉 padding</span>
+xyxy[:, [0,2]] -= pad_x    <span class="c"># x 方向的灰邊</span>
+xyxy[:, [1,3]] -= pad_y    <span class="c"># y 方向的灰邊</span>
+<span class="c"># 放大回原始大小</span>
+xyxy_orig = xyxy / scale
+<span class="c"># 限制不超出畫面</span>
+xyxy_orig[:, [0,2]] = xyxy_orig[:, [0,2]].clip(<span class="k">0</span>, orig_w)</pre>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MODALS  — pipeline.py
+══════════════════════════════════════════════ -->
+
+<!-- ① 開啟影片 -->
+<div class="modal" id="p-open">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>① 開啟影片 ＋ 跳秒</h3>
+    <p>用 OpenCV 的 <code>VideoCapture</code> 開啟影片檔（或攝影機串流）。</p>
+    <p>如果有 <code>--start-sec</code>，在開始讀幀之前先用 <code>CAP_PROP_POS_MSEC</code> 跳到指定時間點——適合測試 899 秒長影片的中段，不用等到那裡。</p>
+    <p>同時讀取影片的 FPS 資訊（用來設定輸出影片的幀率）。若 FPS 數值不合理（如損壞檔案給出 0 或 9999），自動 fallback 到 30。</p>
+    <pre>cap = cv2.VideoCapture(<span class="v">"test_videos/fire.mp4"</span>)
+<span class="c"># 跳到第 450 秒</span>
+cap.set(cv2.CAP_PROP_POS_MSEC, <span class="k">450</span> * <span class="k">1000.0</span>)
+src_fps = cap.get(cv2.CAP_PROP_FPS)
+<span class="c"># 異常值保護</span>
+src_fps = src_fps <span class="k">if</span> <span class="k">1.0</span> &lt;= src_fps &lt;= <span class="k">120.0</span> <span class="k">else</span> <span class="k">30.0</span></pre>
+  </div>
+</div>
+
+<!-- ② Speed -->
+<div class="modal" id="p-speed">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>② Speed 加速讀取</h3>
+    <p><code>--speed N</code> 讓程式每 N 幀只「真正讀」1 幀，輸出影片時長縮為 1/N。主要用於<strong>測試階段</strong>（快速確認長影片的偵測結果）。</p>
+    <p><strong>技術重點</strong>：中間跳過的 N-1 幀用 <code>cap.grab()</code> 而非 <code>cap.read()</code>。</p>
+    <ul>
+      <li><code>grab()</code>：只抓取幀的指標，<strong>不解碼影像</strong>，速度極快</li>
+      <li><code>read()</code>：抓取 + 完整解碼成 numpy array，比較耗時</li>
+    </ul>
+    <p>這個技巧在大量跳幀時可節省 30–50% 的影片解碼時間。</p>
+    <pre><span class="c"># pipeline.py — speed 跳幀</span>
+<span class="k">for</span> _ <span class="k">in</span> range(speed - <span class="k">1</span>):    <span class="c"># 跳過 N-1 幀（只 grab，不解碼）</span>
+    cap.grab()
+ret, frame = cap.read()       <span class="c"># 第 N 幀才真正讀取</span></pre>
+  </div>
+</div>
+
+<!-- ③ Pi 模擬 -->
+<div class="modal" id="p-pisim">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>③ Pi 模擬縮放（--pi-sim）</h3>
+    <p>開發機的測試影片解析度可能是 1080p 或 720p，但 Pi Camera 通常輸出 640×480（480p）。</p>
+    <p><code>--pi-sim</code> 會在每幀進入偵測之前，先把畫面<strong>強制縮到 640×480</strong>，讓開發機模擬 Pi 的視野。</p>
+    <ul>
+      <li>實際在 Pi 上跑時<strong>不需要</strong>這個旗標（Camera 本身就輸出 480p）</li>
+      <li>只在開發機上「假裝是 Pi 在跑」時用</li>
+    </ul>
+    <pre><span class="c"># pipeline.py</span>
+<span class="k">if</span> pi_sim:
+    frame = cv2.resize(frame, (<span class="k">640</span>, <span class="k">480</span>), interpolation=cv2.INTER_LINEAR)</pre>
+  </div>
+</div>
+
+<!-- ④ 跳幀推論 -->
+<div class="modal" id="p-skip">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>④ 跳幀推論（--skip）</h3>
+    <p>AI 推論是最耗時的步驟（Pi 上約 90ms / 幀）。<code>--skip N</code> 讓程式<strong>每 N 幀才呼叫一次 detector</strong>，中間幀沿用上次結果。</p>
+    <ul>
+      <li><code>--skip 1</code>（預設）：每幀都推論，最準確</li>
+      <li><code>--skip 2</code>：推論量減半，FPS 翻倍，框稍微不那麼即時</li>
+      <li><code>--skip 3</code>：推論量剩 1/3，極限省力模式</li>
+    </ul>
+    <p><strong>視覺上的感覺</strong>：輸出影片顯示幀率不變（還是原本的 30fps），但偵測框每 N 幀才「更新」一次——火焰快速移動時框會有輕微延遲感。</p>
+    <pre><span class="c"># pipeline.py — 跳幀控制</span>
+<span class="k">if</span> frame_idx % frame_skip == <span class="k">0</span>:       <span class="c"># 該推論的幀</span>
+    last_detections = detector.detect(frame)
+<span class="c"># 否則沿用 last_detections（不呼叫 detector）</span></pre>
+  </div>
+</div>
+
+<!-- ⑤ EMA FPS -->
+<div class="modal" id="p-ema">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>⑤ EMA FPS 平滑</h3>
+    <p>即時 FPS 每幀都在抖動（某幀快、某幀慢）。如果直接顯示「瞬時 FPS」，畫面左上角的數字會跳來跳去，很難閱讀。</p>
+    <p><strong>解法：指數移動平均（EMA）</strong></p>
+    <p>EMA 公式：<code>新 EMA = α × 瞬時值 + (1 - α) × 舊 EMA</code></p>
+    <ul>
+      <li>α = 0.1（本系統的設定）</li>
+      <li>α 越小 → 顯示越穩定，但反應越慢</li>
+      <li>α 越大 → 反應越快，但數字跳動越明顯</li>
+    </ul>
+    <div class="modal-diagram">
+      <div class="box">瞬時 FPS<br>跳動劇烈<br>8 → 15 → 10</div>
+      <div class="arrow">→</div>
+      <div class="box" style="border-color:var(--fire)">EMA 平滑<br>α = 0.1</div>
+      <div class="arrow">→</div>
+      <div class="box">平滑 FPS<br>緩慢變化<br>11.2 → 11.4</div>
+    </div>
+    <pre><span class="c"># pipeline.py</span>
+ema_fps = <span class="k">0.1</span> * inst_fps + <span class="k">0.9</span> * ema_fps</pre>
+  </div>
+</div>
+
+<!-- ⑥ 輸出顯示 -->
+<div class="modal" id="p-out">
+  <div class="modal-inner">
+    <button class="close-btn" data-close>×</button>
+    <h3>⑥ 輸出與顯示</h3>
+    <p>每處理完一幀，同時做兩件事：</p>
+    <ul>
+      <li><strong style="color:var(--fire)">寫入 mp4</strong>：如果有指定 <code>--output</code>，用 <code>cv2.VideoWriter</code> 把這幀附加到輸出影片中。編碼格式：mp4v。</li>
+      <li><strong style="color:var(--fire)">顯示視窗</strong>：如果沒有 <code>--no-show</code>，用 <code>cv2.imshow()</code> 把當前幀即時顯示在螢幕上。</li>
+    </ul>
+    <p>使用者可以隨時按 <strong style="color:var(--accent)">Q</strong> 提早結束迴圈（透過 <code>cv2.waitKey(1)</code> 偵測按鍵）。</p>
+    <p>迴圈結束後（影片播完或按 Q），程式會自動：
+      <br>・ <code>cap.release()</code>：釋放影片資源
+      <br>・ <code>writer.release()</code>：關閉輸出檔案（不然 mp4 會損壞）
+      <br>・ <code>cv2.destroyAllWindows()</code>：關閉所有視窗
+    </p>
+    <p>最後回傳 avg_fps、total_frames、resolution 等統計數據，由 main.py 印出。</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════════════ -->
+<script>
+mermaid.initialize({
+  startOnLoad:true, theme:'dark',
+  themeVariables:{
+    darkMode:true, background:'#101521', primaryColor:'#222836',
+    primaryTextColor:'#e8ecf1', primaryBorderColor:'#ff6b35',
+    lineColor:'#ff9558', fontFamily:'Noto Sans TC, sans-serif', fontSize:'14px'
+  },
+  flowchart:{curve:'basis', padding:16}
+});
+
+// ── Slide navigation ───────────────────────
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+let current = 0;
+
+function goTo(i){
+  current = Math.max(0, Math.min(total-1, i));
+  slides[current].scrollIntoView({behavior:'smooth', block:'start'});
+  document.getElementById('counter').textContent = `${current+1} / ${total}`;
+}
+function nextSlide(){ goTo(current+1); }
+function prevSlide(){ goTo(current-1); }
+
+document.addEventListener('keydown', e=>{
+  if(e.target.closest('.modal-inner')) return;
+  if(['ArrowDown','PageDown',' '].includes(e.key)){ e.preventDefault(); nextSlide(); }
+  if(['ArrowUp','PageUp'].includes(e.key)){ e.preventDefault(); prevSlide(); }
+  if(e.key==='Home'){ e.preventDefault(); goTo(0); }
+  if(e.key==='End'){ e.preventDefault(); goTo(total-1); }
+  if(e.key==='Escape'){ document.querySelectorAll('.modal.open').forEach(m=>m.classList.remove('open')); }
+});
+
+window.addEventListener('scroll', ()=>{
+  const h = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('pbar').style.width = (window.scrollY/h*100)+'%';
+  let idx=0;
+  slides.forEach((s,i)=>{ if(s.getBoundingClientRect().top<=window.innerHeight*0.4) idx=i; });
+  current=idx;
+  document.getElementById('counter').textContent = `${current+1} / ${total}`;
+});
+
+// ── Modal ─────────────────────────────────
+document.querySelectorAll('.step-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const id = btn.dataset.modal;
+    document.getElementById(id).classList.add('open');
+  });
+});
+document.querySelectorAll('.modal').forEach(modal=>{
+  modal.addEventListener('click', e=>{
+    if(e.target===modal) modal.classList.remove('open');
+  });
+});
+document.querySelectorAll('[data-close]').forEach(btn=>{
+  btn.addEventListener('click', ()=>btn.closest('.modal').classList.remove('open'));
+});
+
+// ── Contour GIF carousel ───────────────────
+const labels = [
+  '煙霧顏色輪廓（test1 前段）',
+  '煙霧顏色輪廓（test1 中段）',
+  '火 + 煙真實顏色區域（test1 後段）',
+  '火 + 煙真實區域（test2 前段）',
+];
+const frames = document.querySelectorAll('#contourFrames img');
+const dots   = document.querySelectorAll('#contourDots .dot');
+const label  = document.getElementById('contourLabel');
+let carouselIdx = 0;
+
+function showFrame(i){
+  frames[carouselIdx].classList.remove('active');
+  dots[carouselIdx].classList.remove('active');
+  carouselIdx = i;
+  frames[carouselIdx].classList.add('active');
+  dots[carouselIdx].classList.add('active');
+  label.textContent = labels[carouselIdx];
+}
+dots.forEach((d,i)=> d.addEventListener('click', ()=> showFrame(i)));
+// auto-advance every 4s
+setInterval(()=> showFrame((carouselIdx+1)%frames.length), 4000);
+</script>
+</body>
+</html>
