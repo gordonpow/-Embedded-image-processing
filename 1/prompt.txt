@@ -1,0 +1,226 @@
+【架構prompt】
+
+# Role
+You are a senior ML + embedded engineer. You build minimal, correct, reproducible systems. You prioritize hardware feasibility over novelty. You do NOT over-engineer.
+
+# Project
+Build a 2-phase fire/smoke detection system for a university course.
+
+# Hardware Lock (NON-NEGOTIABLE)
+- DEV machine (training/export only): Windows 11, RTX 3060 Ti 8GB VRAM, CUDA available
+- DEPLOY target (inference only): Raspberry Pi 4B, ARM Cortex-A72, CPU-only — NO Coral, NO Hailo, NO external accelerator
+- Final deployed model MUST run on RPi 4B CPU at ≥5 FPS at 320×320 or higher input resolution
+
+# Goals (strict 2-phase sequence)
+- Phase 1 — Object Detection: 2 classes (`fire`, `smoke`). Output bounding box + class label + confidence score per detection.
+- Phase 2 — Instance Segmentation: same 2 classes. Replace bounding boxes with tight masks that follow the actual contour of fire/smoke pixels.
+
+# Tech Stack (LOCKED — do not substitute)
+- Python 3.10+, PyTorch + CUDA on Windows
+- Phase 1 model: Ultralytics YOLOv8n (or YOLOv11n if you justify the swap in 2 lines)
+- Phase 2 model: YOLOv8n-seg (or YOLOv11n-seg matching Phase 1)
+- NO other architectures: no DETR, no Mask R-CNN, no SAM in the deployment path
+- RPi inference runtime: NCNN (ARM-optimized) as primary. ONNX Runtime as fallback only if NCNN export fails.
+- Primary dataset: D-Fire (has bbox annotations for fire + smoke). For Phase 2 masks: flag this as a decision point — either (a) switch/supplement to a mask-annotated dataset (FASDD, Roboflow Universe fire-seg sets), or (b) auto-annotate D-Fire bboxes with SAM on the DEV machine only (SAM stays out of deployment). Ask me before choosing.
+
+# Repo Layout (create exactly this)
+fire-smoke-detection/
+├── README.md
+├── requirements.txt
+├── .gitignore
+├── data/
+│   ├── raw/                # gitignored
+│   ├── processed/          # YOLO format
+│   └── data.yaml
+├── scripts/
+│   ├── download_data.py
+│   ├── prepare_data.py
+│   ├── train_det.py
+│   ├── train_seg.py
+│   ├── val.py
+│   ├── infer_image.py
+│   ├── infer_video.py
+│   └── export.py           # .pt → ONNX → NCNN
+├── deploy/rpi/
+│   ├── inference.py
+│   └── SETUP.md            # NCNN install + run steps on RPi 4B
+└── runs/                   # gitignored
+
+# Execution Plan (STRICT order — STOP after each step, output ✅ summary, wait for my "continue")
+Step 0 — Env setup: create venv, write requirements.txt, install PyTorch w/ CUDA, ultralytics, opencv-python. Verify `torch.cuda.is_available()` prints True + device name. ✅ STOP.
+Step 1 — Data prep: download D-Fire → convert to YOLO format → 70/20/10 train/val/test split → report image counts + per-class instance distribution. ✅ STOP.
+Step 2 — Phase 1 training: YOLOv8n, imgsz 640, batch sized to fit 8GB VRAM, ~100 epochs, early stopping patience 20. Report mAP50, mAP50-95, precision, recall per class. ✅ STOP.
+Step 3 — Phase 1 demo: infer_image.py + infer_video.py working on Windows with bbox + label + confidence overlay. Test on 3 sample images and 1 short video. ✅ STOP.
+Step 4 — Phase 1 RPi export: best.pt → ONNX (opset 12) → NCNN. Try FP16 first, then INT8 quant if mAP drop <5%. Write deploy/rpi/inference.py and deploy/rpi/SETUP.md (full NCNN install steps for RPi 4B + how to run). Document expected FPS at 640/416/320 input sizes. ✅ STOP.
+Step 5 — Phase 2 data decision + prep: confirm mask source choice with me (see Tech Stack note), then prepare YOLO-seg format dataset. ✅ STOP.
+Step 6 — Phase 2 training: YOLOv8n-seg, same hyperparam scale. Report box mAP + mask mAP per class. ✅ STOP.
+Step 7 — Phase 2 inference + RPi export: mask overlay rendering (semi-transparent fill on fire/smoke pixels, color-coded per class), NCNN export, updated deploy script. Document RPi FPS for seg model. ✅ STOP.
+
+# Hard Rules
+- MUST stop after every step and wait for my explicit "continue" before starting the next.
+- MUST report metrics with exact numbers, not vague phrasing like "looks good".
+- MUST NOT install Docker, MLflow, W&B, Coral SDK, Hailo SDK, or any accelerator runtime unless I explicitly request.
+- MUST NOT add classes, features, models, or pipeline stages outside this spec.
+- MUST NOT delete datasets, training runs, or weight files without asking.
+- MUST ask before any download larger than 5 GB.
+- Before each non-trivial decision (model variant, data split strategy, quantization choice, mask source), output a 2–3 line rationale, then execute.
+
+# Output discipline
+- After every code change, actually run it. No "this should work" — show the real terminal output.
+- If a step fails: output the exact error → 1-line hypothesis → fix. Never skip silently.
+- Keep code comments minimal and in English. README + SETUP.md in English.
+
+Begin with Step 0.
+
+【 Debug — 故障排除 ・ 硬體相容性】
+# Context (carry forward from prior session)
+- Project: fire/smoke detection, repo `fire-smoke-detection/`
+- Stack locked: YOLOv8n + NCNN on Raspberry Pi 4B (CPU-only, ARM Cortex-A72, NO Coral / NO Hailo / NO external accel)
+- Current stage: Step 4 — Phase 1 RPi export, INT8 quantization
+- Pre-approved fallback: FP16-only deployment is acceptable if INT8 cannot be salvaged (per original spec: "Try FP16 first, then INT8 quant if mAP drop <5%")
+- Existing artifacts (best.pt, ONNX, NCNN FP16, NCNN INT8) MUST remain on disk as evidence
+
+# Task
+Debug the INT8 inference failure on RPi 4B. Full error log is at `./errorlog.txt`.
+My current hypothesis: a low-level operator is unsupported in NCNN INT8.
+TREAT THIS AS A HYPOTHESIS, NOT A CONCLUSION. Verify from the log evidence first. Disagree with me if the log says otherwise.
+
+# Precheck
+- Confirm `errorlog.txt` exists at repo root and is non-empty.
+- If file is missing/empty → STOP and report. Do not fabricate a diagnosis.
+
+# Execution (strict order — STOP after each step, wait for explicit "continue")
+
+Step A — Read & classify
+1. Read `errorlog.txt` in full.
+2. Identify the failing stage: ONNX export / NCNN conversion (onnx2ncnn or pnnx) / INT8 calibration table generation / NCNN runtime inference on RPi.
+3. Extract the exact failing op name, layer name, error code, and surrounding stack frames. Quote verbatim.
+4. List 2–3 candidate root causes ranked by likelihood, each supported by a direct log quote.
+5. Compare to my hypothesis ("operator unsupported in INT8"). State: agree / partially agree / disagree, with reasoning.
+✅ Report. STOP.
+
+Step B — Confirm root cause
+1. Print exact versions: NCNN (RPi side), onnx, onnx2ncnn / pnnx (Windows side), ultralytics, torch.
+2. If a specific layer fails INT8: check whether that layer appears in the calibration table file; report missing entries.
+3. Cross-reference NCNN operator support for INT8 — cite source (ncnn GitHub op list or actual NCNN source file path/commit). Do NOT invent claims about op support.
+4. Output: `Root cause: <X>. Evidence: <Y>. Confidence: high/medium/low.`
+✅ Report. STOP.
+
+Step C — Propose fix paths (DO NOT implement yet)
+Evaluate and rank these candidates. For each, give: probability of success, effort (minutes/hours), FPS impact on RPi 4B, accuracy impact:
+- Mixed-precision INT8 — keep failing layer at FP32 via NCNN per-layer table
+- Replace offending op in model arch (e.g., SiLU → ReLU, or DFL handling) → requires retrain on Windows
+- Re-export ONNX with different opset (try 11, 12, 13, 17) and re-convert
+- Switch converter: onnx2ncnn → pnnx (or vice versa)
+- Fall back to FP16-only NCNN deployment (pre-approved escape hatch)
+- Drop input resolution (640 → 416 → 320) to recover FPS without INT8
+- Switch runtime: NCNN → ONNX Runtime on RPi (fallback path per original spec)
+✅ Report ranked table. STOP.
+
+Step D — Implement chosen fix
+Wait for me to pick ONE path. Implement only that. Do not bundle multiple fixes.
+
+# Hard Rules
+- MUST read `errorlog.txt` before any hypothesis.
+- MUST quote exact failing lines from the log — no paraphrasing in diagnosis.
+- MUST NOT modify any file in Steps A–C. Diagnosis only.
+- MUST NOT install new accelerator runtimes, ML frameworks, or model architectures.
+- MUST NOT retrain without my explicit approval.
+- MUST NOT delete existing INT8 artifacts.
+- MUST cite the exact source (file path, version, URL) for any claim about NCNN/ONNX op support. If you cannot cite, say "uncertain — cannot verify".
+- If log indicates HARDWARE fault (thermal throttle, OOM, SD I/O error, undervoltage), say so explicitly and STOP — software fixes won't help.
+- Prefer "uncertain — need more evidence" over guessing.
+
+# Output discipline
+- Real terminal output, not assumed output.
+- Real version numbers from the environment, not memory.
+- Real log line numbers when quoting.
+
+Begin with Precheck, then Step A.
+
+【架構優化 - 加速】
+# Context (carry forward — prior sessions)
+- Project: fire/smoke detection, repo `fire-smoke-detection/`
+- Stack LOCKED: YOLOv8n + NCNN on Raspberry Pi 4B (CPU-only, ARM Cortex-A72)
+- Hardware lock UNCHANGED: NO Coral, NO Hailo, NO Jetson, NO different SBC, NO overclock beyond stock turbo
+- Current state: Phase 1 trained and deployable via NCNN; INT8 path being debugged in parallel
+- Competition grading axes: (a) real-time capability, (b) sustained FPS on RPi 4B, (c) detection quality (mAP + low false-positive rate on visually-confusing scenes)
+
+# Task
+Run a STRUCTURED performance optimization campaign with strict A/B discipline:
+baseline first → one change at a time → measured before/after → no bundled changes → no silent regressions.
+
+# Hard Rules (read before doing ANYTHING)
+- MUST measure baseline before any optimization. No baseline = no valid improvement claim.
+- MUST change exactly one variable per experiment. NEVER bundle.
+- MUST log every experiment to `bench/results.csv` with exact change description + status (improved / neutral / regressed).
+- MUST report FPS as sustained 5-min average, not 10-frame burst.
+- MUST use the SAME fixed test video and val set across all experiments — lock them at Tier 0, never swap.
+- MUST flag RPi CPU temp ≥80°C — readings under thermal throttle are invalid.
+- MUST NOT touch hardware lock. No new accelerators, no different SBC.
+- MUST NOT cherry-pick demo-friendly scenes for FPS measurement.
+- MUST NOT claim "improved" without numeric evidence vs baseline.
+- If a change degrades mAP50 by >3% (announce this threshold up-front, adjust only with my approval), revert and mark `regressed`. Keep the row — negative results are evidence.
+
+# Tier 0 — Baseline & Measurement Infrastructure (build BEFORE optimizing)
+1. Create `bench/`:
+   - `bench/run_rpi.py` — runs N=300 frames after 30-frame warm-up; logs capture_ms, preprocess_ms, inference_ms, postprocess_ms, total_ms, FPS (sustained avg + p95 + p99)
+   - `bench/eval_quality.py` — val set: mAP50, mAP50-95, P, R per class + FP count on a held-out `hard_negatives/` folder (collect 30–50 visually-confusing non-fire images: sunset, red traffic lights, brake lights, neon, BBQ steam, fog, sunlight on glass — if missing, scrape/curate first)
+   - `bench/results.csv` schema: `exp_id,change,FPS_avg,FPS_p95,infer_ms_avg,mAP50,mAP50-95,FP_count,status,notes`
+2. Lock a fixed ~30s test video covering multiple scenes (indoor/outdoor/day/night/smoke-heavy/fire-heavy/no-fire). Lock the val set. No mid-campaign changes.
+3. Run baseline as `exp_000_baseline`. Log it.
+✅ Report baseline. STOP.
+
+# Tier 1 — Free Wins (no retrain, no model change)
+Apply one at a time. Measure after each. NEVER bundle.
+- T1.1 — RPi CPU governor → `performance` via `/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor`. Verify with `cpufreq-info`. Document required cooling (passive heatsink minimum; fan strongly recommended for sustained runs).
+- T1.2 — NCNN: `net.opt.num_threads = 4`, `opt.use_winograd_convolution = true`, `opt.use_sgemm_convolution = true`, `opt.use_fp16_arithmetic = true` (NEON FP16).
+- T1.3 — Input resolution sweep: 640 → 512 → 416 → 320 → 256. Report FPS + mAP at each. Pick the speed/quality knee point.
+- T1.4 — NMS tuning: drop `max_det` 300 → 50, sweep `conf` 0.10 → 0.35, sweep `iou` 0.45 → 0.5/0.6/0.7.
+- T1.5 — Preprocessing: skip letterbox padding if direct resize loses <2% mAP.
+- T1.6 — Reuse NCNN `Extractor` across frames; persistent `set_blob_allocator` + `set_workspace_allocator`.
+- T1.7 — Headless RPi: stop GUI/desktop services; confirm no other processes on CPU during bench.
+After T1.7: print results.csv as a markdown table, highlight best config so far. STOP.
+
+# Tier 2 — Quantization (continues prior INT8 debug)
+- T2.1 — Confirm working FP16 NCNN baseline (FPS + mAP).
+- T2.2 — INT8 with proper calibration: ≥200 representative images from the TRAIN set (NEVER val set). Report FPS gain + mAP delta.
+- T2.3 — If INT8 mAP drop >5%: mixed-precision INT8 (problem layers FP32 via per-layer table). Report.
+STOP with FP16-vs-INT8 trade-off table.
+
+# Tier 3 — Inference Pipeline
+- T3.1 — Async pipeline: capture / preprocess / inference / postprocess on 4 threads with bounded queues (size 1–2, drop-oldest policy). Measure sustained FPS.
+- T3.2 — Frame-skip with lightweight tracker (OpenCV KCF or CSRT) between full-inference frames. Sweep skip = 1 / 2 / 3. Report perceived latency and detection consistency.
+- T3.3 — Camera: set capture resolution = model input resolution (avoid double-resize). OpenCV `CAP_V4L2` backend.
+STOP with pipeline gains table.
+
+# Tier 4 — Model-level (requires Windows retrain on RTX 3060 Ti)
+ASK ME before starting any of these — training time cost.
+- T4.1 — Channel pruning (e.g., `torch-pruning` by VainF) → finetune → re-export → re-bench.
+- T4.2 — Knowledge distillation: train YOLOv8s teacher on same data → distill into YOLOv8n student. Goal: ↑mAP at same FPS.
+- T4.3 — Custom shrink: train with `width=0.5, depth=0.33` for sub-nano variant. Trade mAP for FPS.
+STOP and wait for explicit go on each.
+
+# Tier 5 — Data & Training (accuracy lever)
+ASK ME before retraining.
+- T5.1 — Hard-negative mining: add the `hard_negatives/` set from Tier 0 into training as background images. Massive FP reduction for fire detection.
+- T5.2 — Augmentation: confirm mosaic enabled, enable mixup, enable copy-paste for small fire instances.
+- T5.3 — Class imbalance: tune `cls_pw` or oversample minority class.
+- T5.4 — Multi-scale training: `imgsz=[480, 640, 800]`.
+- T5.5 — Confirm cosine LR + EMA enabled (defaults in ultralytics — verify, don't assume).
+STOP between each.
+
+# Output discipline
+- After each tier: print `results.csv` as markdown, highlight new best.
+- Real measured numbers from RPi only. No estimates, no extrapolation.
+- Keep regressed experiments in the log with `status=regressed`. Negative evidence is evidence.
+
+# Competition prep (only AFTER all tiers complete)
+Write `DEMO.md`:
+- Best config: model file + input resolution + thresholds
+- Expected FPS range + thermal requirements
+- Known failure modes (be honest with yourself; surprises in demo = worse than known limits)
+- Recommended camera setup
+Do NOT tune anything for demo scenes specifically — measure on the fixed test set only.
+
+Begin with Tier 0.

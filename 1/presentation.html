@@ -206,10 +206,10 @@ table.params tr:hover td{background:rgba(255,107,53,.04)}
 <div class="progress"><div class="progress-bar" id="pbar"></div></div>
 
 <!-- ═══════════════════════════════════════════
-     01 / 08  技術工具
+     01 / 10  技術工具
 ══════════════════════════════════════════════ -->
 <section class="slide" id="s1">
-  <span class="slide-num">01 / 08</span>
+  <span class="slide-num">01 / 10</span>
   <h3 class="kicker">用了什麼技術 / 工具</h3>
   <h2 class="h">這個專案的「材料清單」</h2>
   <div class="grid-3" style="margin-top:10px">
@@ -222,6 +222,9 @@ table.params tr:hover td{background:rgba(255,107,53,.04)}
         <strong style="color:var(--fire)">v8</strong> = 第 8 代版本。<br>
         <strong style="color:var(--fire)">n</strong> = <strong>Nano（最小款）</strong>。YOLOv8 有五種尺寸：n（最快最小）→ s → m → l → x（最準最慢）。我們選 n 是因為 Pi 的 CPU 只跑得動最輕量版本。<br>
         <strong style="color:var(--fire)">為什麼選 v8 不選其他版本？</strong> v5 是舊款（2020）、v9/v10 太新且社群資源少；v8（2023）是目前文件最完整、社群最活躍的穩定版，且內建一鍵匯出 ONNX 格式，直接支援 Pi 部署。
+      </p>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6">
+        📦 訓練權重來源：<a href="https://github.com/luminous0219/fire-and-smoke-detection-yolov8" target="_blank" style="color:var(--fire-2);text-decoration:underline">luminous0219/fire-and-smoke-detection-yolov8</a>（AGPL-3.0）
       </p>
     </div>
     <div class="card">
@@ -254,10 +257,10 @@ table.params tr:hover td{background:rgba(255,107,53,.04)}
 </section>
 
 <!-- ═══════════════════════════════════════════
-     02 / 08  系統拆分
+     02 / 10  系統拆分
 ══════════════════════════════════════════════ -->
 <section class="slide" id="s2">
-  <span class="slide-num">02 / 08</span>
+  <span class="slide-num">02 / 10</span>
   <h3 class="kicker">系統拆分</h3>
   <h2 class="h">整個程式 = 4 個檔案分工合作<br><span style="font-size:0.55em;color:var(--muted);font-weight:400">想像一間餐廳</span></h2>
   <div class="grid-4" style="margin-top:16px">
@@ -313,10 +316,10 @@ flowchart LR
 </section>
 
 <!-- ═══════════════════════════════════════════
-     03 / 08  detector.py 內部 ★ 可點擊 ★
+     03 / 10  detector.py 內部 ★ 可點擊 ★
 ══════════════════════════════════════════════ -->
 <section class="slide" id="s3">
-  <span class="slide-num">03 / 08</span>
+  <span class="slide-num">03 / 10</span>
   <h3 class="kicker">AI 大腦 — detector.py</h3>
   <h2 class="h">一張畫面進去，偵測結果出來<br><span style="font-size:0.5em;color:var(--muted);font-weight:400">👇 點擊任一步驟，看詳細說明</span></h2>
   <div class="flow">
@@ -345,10 +348,10 @@ flowchart LR
 </section>
 
 <!-- ═══════════════════════════════════════════
-     04 / 08  pipeline.py 主迴圈 ★ 可點擊 ★
+     04 / 10  pipeline.py 主迴圈 ★ 可點擊 ★
 ══════════════════════════════════════════════ -->
 <section class="slide" id="s4">
-  <span class="slide-num">04 / 08</span>
+  <span class="slide-num">04 / 10</span>
   <h3 class="kicker">主迴圈 — pipeline.py</h3>
   <h2 class="h">影片一幀一幀地被處理<br><span style="font-size:0.5em;color:var(--muted);font-weight:400">👇 點擊任一步驟，看詳細說明</span></h2>
   <div class="flow">
@@ -356,7 +359,7 @@ flowchart LR
 flowchart TB
   S([開啟影片]) --> R[讀取一幀]
   R --> SK{跳幀<br>skip?}
-  SK -->|推論幀| DE[呼叫 detector]
+  SK -->|偵測幀| DE[呼叫 detector]
   SK -->|跳過幀| RE[沿用上次結果]
   DE --> DR{畫哪種?}
   RE --> DR
@@ -372,19 +375,32 @@ flowchart TB
   </div>
   <div class="step-btns">
     <button class="step-btn" data-modal="p-open"><span class="num">①</span> 開啟影片 + 跳秒</button>
-    <button class="step-btn" data-modal="p-speed"><span class="num">②</span> Speed 加速讀取</button>
+    <button class="step-btn" data-modal="p-speed"><span class="num">②</span> 加速讀取（--speed）</button>
     <button class="step-btn" data-modal="p-pisim"><span class="num">③</span> Pi 模擬縮放</button>
-    <button class="step-btn" data-modal="p-skip"><span class="num">④</span> 跳幀推論</button>
+    <button class="step-btn" data-modal="p-skip"><span class="num">④</span> 跳幀（--skip）</button>
     <button class="step-btn" data-modal="p-ema"><span class="num">⑤</span> EMA FPS 平滑</button>
     <button class="step-btn" data-modal="p-out"><span class="num">⑥</span> 輸出與顯示</button>
+  </div>
+  <!-- speed vs skip 對照 -->
+  <div class="card" style="margin-top:16px;padding:14px">
+    <p style="font-size:13px;color:var(--accent);font-weight:700;margin-bottom:10px">⚠️ 兩個都叫「跳幀」容易混淆——<code>--speed</code> 是影片變快，<code>--skip</code> 是 AI 偷懶</p>
+    <table class="params" style="font-size:12px">
+      <thead><tr><th>比較項</th><th><code>--speed N</code> 加速讀取</th><th><code>--skip N</code> 跳幀</th></tr></thead>
+      <tbody>
+        <tr><td>對影片做什麼</td><td>整幀<strong>丟掉、不解碼</strong></td><td>整幀<strong>保留、照常播</strong></td></tr>
+        <tr><td>對 AI 做什麼</td><td>沒有這幀，自然不偵測</td><td>中間幀<strong>沿用上次的框</strong></td></tr>
+        <tr><td>輸出時長</td><td>縮為 1/N（快轉效果）</td><td><strong>不變</strong>（播放流暢度不影響）</td></tr>
+        <tr><td>適合什麼</td><td>快速預覽長影片、縮短測試時間</td><td>Pi 即時播放、提升體感 FPS</td></tr>
+      </tbody>
+    </table>
   </div>
 </section>
 
 <!-- ═══════════════════════════════════════════
-     05 / 08  兩種畫法對比 + 真實 GIF
+     05 / 10  兩種畫法對比 + 真實 GIF
 ══════════════════════════════════════════════ -->
 <section class="slide" id="s5">
-  <span class="slide-num">05 / 08</span>
+  <span class="slide-num">05 / 10</span>
   <h3 class="kicker">兩種視覺化方式</h3>
   <h2 class="h">同一個偵測結果，兩種畫法</h2>
   <div class="grid-2" style="margin-top:16px;align-items:start">
@@ -446,16 +462,75 @@ flowchart TB
 </section>
 
 <!-- ═══════════════════════════════════════════
-     06 / 08  開發歷程
+     06 / 10  Pi 部署翻車現場
 ══════════════════════════════════════════════ -->
 <section class="slide" id="s6">
-  <span class="slide-num">06 / 08</span>
+  <span class="slide-num">06 / 10</span>
+  <h3 class="kicker">Pi 部署翻車現場</h3>
+  <h2 class="h">兩次錯誤，一次修好<br><span style="font-size:0.5em;color:var(--muted);font-weight:400">errorlog 完整回顧</span></h2>
+  <div class="grid-2" style="margin-top:14px;align-items:start;gap:18px">
+    <!-- 左：錯誤 -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="background:#1a0808;border:1px solid #5c1a1a;border-radius:12px;padding:16px">
+        <p style="font-size:11px;color:#e05050;font-weight:700;letter-spacing:.1em;margin-bottom:8px">❌ 第一次出包 — ConvInteger 不支援</p>
+        <pre style="background:#0d0505;border:1px solid #3d1515;border-radius:6px;padding:12px;font-size:11.5px;line-height:1.6;color:#ff8080;overflow-x:auto">onnxruntime...NotImplemented:
+[ONNXRuntimeError] : 9 : NOT_IMPLEMENTED :
+Could not find an implementation
+for ConvInteger(10) node</pre>
+        <p style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6">白話翻譯：Pi 上的 AI 引擎（ONNX Runtime）<br>看到「ConvInteger」這個指令，<strong style="color:#ff8080">完全不認識</strong>。</p>
+      </div>
+      <div style="background:#1a0808;border:1px solid #5c1a1a;border-radius:12px;padding:16px">
+        <p style="font-size:11px;color:#e05050;font-weight:700;letter-spacing:.1em;margin-bottom:8px">❌ 第二次出包 — 檔案不在 Pi 上</p>
+        <pre style="background:#0d0505;border:1px solid #3d1515;border-radius:6px;padding:12px;font-size:11.5px;line-height:1.6;color:#ff8080;overflow-x:auto">NO_SUCHFILE :
+Load model from
+models/fire_smoke_yolov8n_320.onnx failed.
+File doesn't exist</pre>
+        <p style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6">原因：FP32 模型太大，被 <code>.gitignore</code> 排除。<br>組員在 Pi 上 <code>git pull</code> 後，<strong style="color:#ff8080">根本找不到這個檔案</strong>。</p>
+      </div>
+    </div>
+    <!-- 右：解說 -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <h4 style="font-size:14px;margin-bottom:8px">🔬 為什麼 ConvInteger 不行？</h4>
+        <p style="font-size:13px;line-height:1.75">第一次量化用 <code>quantize_dynamic</code>，它產生的模型用 <strong style="color:var(--fire)">ConvInteger</strong> 算子。但 Pi 的 CPU 是 ARM64 架構——ONNX Runtime 的 ARM64 版本<strong>根本沒有實作這個算子</strong>，所以模型一載入就崩潰。</p>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px">
+          <span style="padding:3px 10px;border-radius:999px;background:rgba(255,107,53,.15);color:#ff8080">quantize_dynamic → ConvInteger → ❌ ARM64</span>
+          <span style="color:var(--muted)">→</span>
+          <span style="padding:3px 10px;border-radius:999px;background:rgba(100,200,100,.15);color:#7dcf7d">quantize_static + QDQ → QLinearConv → ✅</span>
+        </div>
+      </div>
+      <div class="card">
+        <h4 style="font-size:14px;margin-bottom:8px">✅ 修好的三步驟</h4>
+        <ol style="font-size:13px;line-height:2.1;padding-left:18px;color:#d6dae3">
+          <li><strong>改量化方式</strong>：<code>quantize_dynamic</code> → <code>quantize_static + QDQ + per_channel=False</code><br>
+            <span style="font-size:11px;color:var(--muted)">QDQ 格式讓 ARM64 認得到 QLinearConv，per_channel=False 解決舊版 ORT 相容問題</span></li>
+          <li><strong>改作業流程</strong>：量化在開發機（有 FP32 模型）上做，把 INT8 結果推到 GitHub<br>
+            <span style="font-size:11px;color:var(--muted)">組員在 Pi 上只需 git pull，不必自己量化</span></li>
+          <li><strong>加真實校準集</strong>：從 <code>test1.mp4</code> 抽 30 幀，避免精度爛掉<br>
+            <span style="font-size:11px;color:var(--muted)">隨機假資料量化出來的模型偵測效果會明顯變差</span></li>
+        </ol>
+      </div>
+      <div class="stat" style="flex-direction:row;align-items:center;gap:18px;padding:14px">
+        <div><span class="val" style="font-size:24px">2.0</span><span class="lbl">FPS 修前</span></div>
+        <div style="font-size:22px;color:var(--fire)">→</div>
+        <div><span class="val" style="font-size:24px;color:#7dcf7d">3.6</span><span class="lbl">FPS 修後（+80%）</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     07 / 10  開發歷程
+══════════════════════════════════════════════ -->
+<section class="slide" id="s7old">
+  <span class="slide-num">07 / 10</span>
   <h3 class="kicker">開發歷程</h3>
   <h2 class="h">從零到部署，走過的八個關卡</h2>
   <div class="timeline" style="margin-top:14px;font-size:14px">
     <div class="timeline-item">
       <h5>① 找模型 ・ 不從零訓練</h5>
-      <p>使用 GitHub 上已用大量火災照片訓練好的 <strong>YOLOv8n</strong> 權重（.pt 檔）。n = Nano，YOLOv8 家族最輕量的版本，專為 Pi 這類低算力設備設計。省掉自己標注資料 + 數週訓練的時間。</p>
+      <p>在 GitHub 找到開源專案 <a href="https://github.com/luminous0219/fire-and-smoke-detection-yolov8" target="_blank" style="color:var(--fire-2)">luminous0219/fire-and-smoke-detection-yolov8</a>（AGPL-3.0 授權），作者已用大量火災與煙霧照片訓練好 <strong>YOLOv8n</strong> 權重（.pt 檔，約 6 MB）。備援來源：<a href="https://github.com/RichardoMrMu/yolov5-fire-smoke-detect" target="_blank" style="color:var(--fire-2)">RichardoMrMu/yolov5-fire-smoke-detect</a>。</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:4px">為什麼用別人的？自己從頭標注幾千張火災圖再訓練，至少要花 2-3 週。這份作業的重點是整合與部署，不是資料標注。</p>
     </div>
     <div class="timeline-item">
       <h5>② 匯出 ONNX 通用格式</h5>
@@ -485,11 +560,23 @@ flowchart TB
     <div class="timeline-item">
       <h5>⑥ 改用 QDQ 靜態量化（解決）</h5>
       <p>
-        <strong>QDQ 是什麼？</strong> Q = Quantize（變整數）、D = DeQuantize（變回小數）、Q = Quantize（再變整數）。<br>
-        白話：在模型每一層的算子前後插入「轉換標記」，讓 ONNX Runtime 在 Pi 上能改用 <strong>ARM CPU 認得的 QLinearConv 算子</strong>執行，而不是 Pi 不支援的 ConvInteger。<br>
-        加上 <code class="mono" style="color:var(--accent)">per_channel=False</code>（整層共用一組量化參數，ARM 才支援），Pi 終於順利跑起來。<br>
-        FPS 從 ~2.0 提升至 <strong>3.6 FPS</strong>（提升約 80%）。
+        先解釋「浮點數 vs 整數」：模型訓練時每個權重是 <strong>FP32（32-bit 浮點數）</strong>，像精確到小數點後 7 位的溫度計（例：0.4523187），精細但每個數字要佔 4 bytes。<strong>INT8（8-bit 整數）</strong>只用 -128 到 +127，每個數字只佔 1 byte，體積縮 4 倍、速度更快，但細節變粗——精度約損失 3-5%，對火災偵測來說可接受。
       </p>
+      <p>
+        問題：模型學的是浮點數，怎麼用整數跑？<strong>QDQ 格式</strong>就是解法——在模型每層運算前後加上「Q-D-Q 三明治」：
+        <br>・ Q（Quantize）= 把浮點數壓成整數，省空間
+        <br>・ D（DeQuantize）= 算的時候，把整數臨時還原成浮點數
+        <br>・ Q（Quantize）= 算完再壓回整數
+        <br>這樣包裝後，ONNX Runtime 在 Pi 上能改用 ARM64 認識的 <code class="mono" style="color:var(--accent)">QLinearConv</code> 算子執行，而不是 Pi 不支援的 <code class="mono" style="color:#e05050">ConvInteger</code>。
+      </p>
+      <p>加上 <code class="mono" style="color:var(--accent)">per_channel=False</code>（整層共用一組量化參數，Pi 舊版 onnxruntime 才完全支援），最終 FPS 從 ~2.0 提升至 <strong>3.6 FPS</strong>（+80%）。</p>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;font-size:12px">
+        <div class="card" style="padding:10px;text-align:center"><div style="font-size:11px;color:var(--muted)">每個權重佔</div><div style="font-weight:700;color:var(--fire)">FP32: 4B → INT8: 1B</div></div>
+        <div class="card" style="padding:10px;text-align:center"><div style="font-size:11px;color:var(--muted)">模型大小</div><div style="font-weight:700;color:var(--fire)">11.6 MB → ~3 MB</div></div>
+        <div class="card" style="padding:10px;text-align:center"><div style="font-size:11px;color:var(--muted)">Pi 速度</div><div style="font-weight:700;color:#7dcf7d">2.0 → 3.6 FPS</div></div>
+        <div class="card" style="padding:10px;text-align:center"><div style="font-size:11px;color:var(--muted)">精度損失</div><div style="font-weight:700;color:var(--accent)">約 3-5%</div></div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:6px">詳細出錯過程與修復步驟，見第 06 頁「翻車現場」。</p>
     </div>
     <div class="timeline-item">
       <h5>⑦ 跳幀（--skip）——讓 3.6 FPS 看起來更流暢</h5>
@@ -507,10 +594,10 @@ flowchart TB
 </section>
 
 <!-- ═══════════════════════════════════════════
-     07 / 08  參數一覽
+     08 / 10  參數一覽
 ══════════════════════════════════════════════ -->
-<section class="slide" id="s7">
-  <span class="slide-num">07 / 08</span>
+<section class="slide" id="s8old">
+  <span class="slide-num">08 / 10</span>
   <h3 class="kicker">執行參數</h3>
   <h2 class="h">使用者可以調的 12 個旋鈕</h2>
   <table class="params">
@@ -533,10 +620,10 @@ flowchart TB
 </section>
 
 <!-- ═══════════════════════════════════════════
-     08 / 08  效能數據
+     09 / 10  效能數據
 ══════════════════════════════════════════════ -->
-<section class="slide" id="s8">
-  <span class="slide-num">08 / 08</span>
+<section class="slide" id="s9old">
+  <span class="slide-num">09 / 10</span>
   <h3 class="kicker">效能數據</h3>
   <h2 class="h">不同設定下能跑多快？</h2>
   <div class="grid-4" style="margin-top:12px">
@@ -569,11 +656,138 @@ flowchart TB
 </section>
 
 <!-- ═══════════════════════════════════════════
+     10 / 10  Agentic Engineering
+══════════════════════════════════════════════ -->
+<section class="slide" id="s10">
+  <span class="slide-num">10 / 10</span>
+  <h3 class="kicker">AI 協作開發</h3>
+  <h2 class="h">Agentic Engineering<br><span style="font-size:0.5em;color:var(--muted);font-weight:400">給目標、給限制、給工具——讓 AI 當工程師</span></h2>
+  <p class="lead" style="margin-bottom:20px">本專案由 AI 協作完成。 建立一個精確的運作框架——只給三件事，讓 AI 代理（Agent）在邊界內自主尋找最佳路徑。</p>
+  <div class="grid-3" style="margin-bottom:16px">
+    <div class="card">
+      <h4 style="font-size:15px;margin-bottom:10px">目標（Goal）<span style="font-size:12px;color:var(--muted);font-weight:400;margin-left:6px">定義終點</span></h4>
+      <p style="font-size:13px;line-height:1.8;color:#d6dae3">在 Raspberry Pi 4B 平台上實現即時火災與煙霧偵測，系統具備視覺化標註，並在邊緣裝置上穩定運行。</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px">定義「要做什麼」，不講「怎麼做」。</p>
+    </div>
+    <div class="card">
+      <h4 style="font-size:15px;margin-bottom:10px">限制（Constraints）<span style="font-size:12px;color:var(--muted);font-weight:400;margin-left:6px">劃定邊界</span></h4>
+      <ul style="font-size:13px;line-height:2;color:#d6dae3;padding-left:16px">
+        <li>硬體：Pi 4B ・ ARM64 CPU ・ 4 GB RAM ・ 無 GPU</li>
+        <li>性能：嵌入式部署，FPS ≥ 3</li>
+        <li>模型大小：≤ 12 MB</li>
+      </ul>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px">限制是 agent 做選型時的篩選器。沒有限制，AI 會推薦最大最強但跑不起來的方案。</p>
+    </div>
+    <div class="card">
+      <h4 style="font-size:15px;margin-bottom:10px">工具（Tools）<span style="font-size:12px;color:var(--muted);font-weight:400;margin-left:6px">賦予手腳</span></h4>
+      <p style="font-size:12px;color:var(--fire);font-weight:700;margin-bottom:4px">技術底層</p>
+      <p style="font-size:13px;color:#d6dae3;line-height:1.75">YOLOv8 ・ ONNX Runtime ・ OpenCV ・ INT8 量化</p>
+      <p style="font-size:12px;color:var(--fire);font-weight:700;margin:8px 0 4px">協作代理（Agent 的子工具）</p>
+      <ul style="font-size:13px;line-height:2;color:#d6dae3;padding-left:16px">
+        <li>Gemini CLI — 外部技術文件查詢、文案包裝</li>
+        <li>gpt-4o — 測試碼的邏輯審查與錯誤偵測</li>
+      </ul>
+      <p style="font-size:12px;color:var(--muted);margin-top:8px">AI agent 也可以用「其他 AI」當子工具，這是現代協作開發的真實樣貌。</p>
+    </div>
+  </div>
+  <div class="flow" style="padding:14px 20px;margin-bottom:16px">
+    <p style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px">Agent 如何「工程化」？</p>
+    <p style="font-size:13px;line-height:1.8;color:#d6dae3">當我們定義好這三個維度，AI 的角色從「代碼產生器」轉變為「工程實踐者」。人類設定邊界，AI 在框架內完成繁瑣的工程實作——選型、量化、debug、架構切分都由 agent 自己判斷。</p>
+  </div>
+
+  <!-- 三大塊 prompt 展示 -->
+  <p style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:12px">實際給 agent 的 prompt 長什麼樣？</p>
+  <div class="grid-3">
+
+    <!-- ① Architecture -->
+    <div style="background:linear-gradient(160deg,var(--panel),var(--bg-2));border:1px solid var(--line);border-radius:14px;overflow:hidden">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--line)">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:6px">Architecture — System Design</p>
+        <pre style="background:transparent;border:none;padding:0;margin:0;font-size:11px;line-height:1.65;color:#c4cad5;white-space:pre-wrap">Role: Senior ML/Embedded Engineer.
+Focus: Minimal, reproducible Pi 4B systems.
+Project: Phase 1 BBox detection using
+  pre-trained YOLOv8n weights.
+Hardware: Win11 (Dev) → Pi 4B (Deploy,
+  ARM Cortex-A72, CPU-only).
+Tech Stack: Python, YOLOv8n, ONNX Runtime.
+  Phase 2 Seg is future scope.
+Workflow: Step-by-step; STOP after each
+  step and wait for approval.
+Hard Rules: No over-engineering, Docker,
+  or external accelerators.</pre>
+      </div>
+      <div style="padding:10px 14px">
+        <table style="font-size:11px;width:100%;border-collapse:collapse;color:#c4cad5;line-height:1.75">
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700;width:72px">Role</td><td>Senior ML/Embedded Engineer</td></tr>
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700">Context</td><td>Pi 4B CPU-only ・ ONNX Runtime ・ pre-trained YOLOv8n</td></tr>
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700">Task</td><td>Design Phase 1 BBox pipeline; preserve Phase 2 extensibility</td></tr>
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700">Hard Rules</td><td>Exact metrics only; no accelerators; no over-engineering</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ② Debug -->
+    <div style="background:linear-gradient(160deg,var(--panel),var(--bg-2));border:1px solid var(--line);border-radius:14px;overflow:hidden">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--line)">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:6px">Debug — Hardware Compatibility</p>
+        <pre style="background:transparent;border:none;padding:0;margin:0;font-size:11px;line-height:1.65;color:#c4cad5;white-space:pre-wrap">Context: Pi 4B, INT8 ONNX model on
+  ONNX Runtime (CPU-only).
+Task: Debug INT8 inference failures
+  found in errorlog.txt.
+Workflow: Read log → Classify stage →
+  Extract failing op → Rank root causes.
+Strategy: Propose fix paths only after
+  confirming root cause with evidence.
+Hard Rules: Quote exact failing lines;
+  no file modifications during diagnosis.
+Finality: Implement and verify the
+  chosen fix via empirical logs.</pre>
+      </div>
+      <div style="padding:10px 14px">
+        <table style="font-size:11px;width:100%;border-collapse:collapse;color:#c4cad5;line-height:1.75">
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700;width:72px">Role</td><td>Senior Embedded AI Debug Engineer</td></tr>
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700">Context</td><td>ORT INT8 model fails on Pi 4B; errorlog.txt attached</td></tr>
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700">Task</td><td>Diagnose failing op, rank root causes, implement one fix</td></tr>
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700">Hard Rules</td><td>Quote exact log lines; no changes during diagnosis; no guessing</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ③ Optimization -->
+    <div style="background:linear-gradient(160deg,var(--panel),var(--bg-2));border:1px solid var(--line);border-radius:14px;overflow:hidden">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--line)">
+        <p style="font-size:11px;color:var(--muted);margin-bottom:6px">Optimization — FPS Tuning</p>
+        <pre style="background:transparent;border:none;padding:0;margin:0;font-size:11px;line-height:1.65;color:#c4cad5;white-space:pre-wrap">Context: Pi 4B, Phase 1 operational.
+  FP32 ~2.0 FPS → target ≥3.6 FPS.
+Optimizations: INT8 QDQ quantization,
+  frame-skip (--skip), speed flag
+  (--speed, cap.grab()), EMA FPS.
+Method: Baseline first → change ONE
+  variable → measure delta → repeat.
+Metrics: Sustained avg FPS; flag
+  thermal throttle (≥80°C) as invalid.
+Hard Rules: Verify accuracy stays
+  acceptable after each speed tweak.</pre>
+      </div>
+      <div style="padding:10px 14px">
+        <table style="font-size:11px;width:100%;border-collapse:collapse;color:#c4cad5;line-height:1.75">
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700;width:72px">Role</td><td>Pi 4B Performance Optimization Engineer</td></tr>
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700">Context</td><td>FP32 ~2.0 FPS; target ≥3.6 via software-only optimizations</td></tr>
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700">Task</td><td>A/B test: INT8 QDQ / frame-skip / speed flag / EMA FPS</td></tr>
+          <tr><td style="padding:2px 0;color:var(--fire);font-weight:700">Hard Rules</td><td>Baseline before any change; one variable at a time; no thermal reads</td></tr>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
      NAV
 ══════════════════════════════════════════════ -->
 <div class="nav">
   <button onclick="prevSlide()">← 上一頁</button>
-  <span id="counter">1 / 8</span>
+  <span id="counter">1 / 10</span>
   <button onclick="nextSlide()">下一頁 →</button>
 </div>
 
@@ -617,8 +831,15 @@ dh = (320 - nh) / 2              <span class="c"># 上下各填這麼多灰</spa
     <ul>
       <li><strong style="color:var(--fire)">BGR → RGB</strong>：OpenCV 讀進來的畫面色彩順序是藍-綠-紅（BGR），但 AI 訓練時用紅-綠-藍（RGB）。不換的話顏色辨識會全錯。</li>
       <li><strong style="color:var(--fire)">÷ 255</strong>：像素值原本是 0–255 的整數，AI 喜歡 0–1 的小數。把所有數值除以 255，讓模型計算更穩定。</li>
-      <li><strong style="color:var(--fire)">HWC → NCHW</strong>：OpenCV 的格式是「高×寬×通道（HWC）」，AI 模型要的是「批次×通道×高×寬（NCHW）」——用 NumPy 轉置，再加一個 batch 維度。</li>
+      <li><strong style="color:var(--fire)">HWC → NCHW</strong>：OpenCV 拍出來的每一幀是「高 × 寬 × 通道（HWC）」——想像成一張彩色相片，每個像素背著一個 RGB 三色球。AI 模型要的格式剛好相反：「批次 × 通道 × 高 × 寬（NCHW）」——想像成把紅、綠、藍三層分開疊成三張單色透明片，再裝進一個盒子。為什麼？因為 AI 做矩陣運算時，同色通道的資料放在連續的記憶體位置，計算效率更高。</li>
     </ul>
+    <div class="modal-diagram" style="flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px">
+        <div class="box" style="text-align:left;min-width:160px"><strong style="color:var(--muted)">HWC [320, 320, 3]</strong><br>每個像素 = (R, G, B)<br><span style="font-size:11px;color:var(--muted)">OpenCV 的格式</span></div>
+        <div class="arrow">→</div>
+        <div class="box" style="text-align:left;min-width:180px;border-color:var(--fire)"><strong style="color:var(--fire)">NCHW [1, 3, 320, 320]</strong><br>R 層 / G 層 / B 層各自獨立<br><span style="font-size:11px;color:var(--muted)">AI 模型要的格式</span></div>
+      </div>
+    </div>
     <div class="modal-diagram">
       <div class="box">BGR 畫面<br>[320,320,3]<br>值 0–255</div>
       <div class="arrow">→</div>
@@ -759,8 +980,8 @@ src_fps = src_fps <span class="k">if</span> <span class="k">1.0</span> &lt;= src
 <div class="modal" id="p-speed">
   <div class="modal-inner">
     <button class="close-btn" data-close>×</button>
-    <h3>② Speed 加速讀取</h3>
-    <p><code>--speed N</code> 讓程式每 N 幀只「真正讀」1 幀，輸出影片時長縮為 1/N。主要用於<strong>測試階段</strong>（快速確認長影片的偵測結果）。</p>
+    <h3>② 加速讀取（--speed）</h3>
+    <p><code>--speed N</code> 讓程式每 N 幀只「真正讀」1 幀，中間 N-1 幀<strong>整幀丟掉、不解碼也不偵測</strong>。輸出影片時長縮為 1/N，整部影片看起來像快轉。主要用於<strong>測試階段</strong>（快速確認長影片的偵測結果，不用等到整部放完）。</p>
     <p><strong>技術重點</strong>：中間跳過的 N-1 幀用 <code>cap.grab()</code> 而非 <code>cap.read()</code>。</p>
     <ul>
       <li><code>grab()</code>：只抓取幀的指標，<strong>不解碼影像</strong>，速度極快</li>
@@ -791,13 +1012,13 @@ ret, frame = cap.read()       <span class="c"># 第 N 幀才真正讀取</span><
   </div>
 </div>
 
-<!-- ④ 跳幀推論 -->
+<!-- ④ 跳幀 -->
 <div class="modal" id="p-skip">
   <div class="modal-inner">
     <button class="close-btn" data-close>×</button>
-    <h3>④ 跳幀推論（--skip）</h3>
-    <p><strong style="color:var(--fire)">白話比喻：</strong>想像你在用監視器找小偷。如果每 0.03 秒（30 FPS）都認真看一次，眼睛會累死。實際上你可能每 0.3 秒瞄一下就夠了——小偷不會在 0.03 秒內就消失。AI 偵測火災也是同理：每幀都跑推論太奢侈，<strong>跳幀是把寶貴的運算用在刀口上</strong>。</p>
-    <p>AI 推論是最耗時的步驟（Pi 上約 90ms / 幀）。<code>--skip N</code> 讓程式<strong>每 N 幀才呼叫一次 detector</strong>，中間幀沿用上次結果。</p>
+    <h3>④ 跳幀（--skip）</h3>
+    <p>跟 <code>--speed</code> 不同：這裡每幀都照常讀取和顯示，只是<strong>中間幀不重新偵測</strong>——沿用上次的框。影片時長不變，畫面流暢度不受影響。</p>
+    <p>AI 偵測在 Pi 上一次約 90ms，是整個迴圈最慢的步驟。<code>--skip N</code> 讓程式<strong>每 N 幀才呼叫一次 detector</strong>，等於把運算量除以 N。火焰移動慢，幾幀內位置差不多，沿用舊框肉眼幾乎看不出差異。</p>
     <ul>
       <li><code>--skip 1</code>（預設）：每幀都推論，最準確</li>
       <li><code>--skip 2</code>：推論量減半，FPS 翻倍，框稍微不那麼即時</li>
