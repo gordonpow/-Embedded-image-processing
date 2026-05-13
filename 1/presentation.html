@@ -215,8 +215,14 @@ table.params tr:hover td{background:rgba(255,107,53,.04)}
   <div class="grid-3" style="margin-top:10px">
     <div class="card">
       <div class="icon">🎯</div>
-      <h4>YOLOv8</h4>
-      <p><strong>AI 偵測模型本人</strong>。YOLO = You Only Look Once，「一眼看完整張圖」。預先用大量火災照片訓練過，已經「知道」火和煙長什麼樣。</p>
+      <h4>YOLOv8<span style="color:var(--fire)">n</span></h4>
+      <p><strong>AI 偵測模型本人</strong>。拆開念：</p>
+      <p style="font-size:12px;line-height:1.9;margin-top:6px">
+        <strong style="color:var(--fire)">YOLO</strong> = You Only Look Once，「一眼看完整張圖」——不像舊方法要先找「可能的區域」再判斷，YOLO 一次掃完整張，所以快。<br>
+        <strong style="color:var(--fire)">v8</strong> = 第 8 代版本。<br>
+        <strong style="color:var(--fire)">n</strong> = <strong>Nano（最小款）</strong>。YOLOv8 有五種尺寸：n（最快最小）→ s → m → l → x（最準最慢）。我們選 n 是因為 Pi 的 CPU 只跑得動最輕量版本。<br>
+        <strong style="color:var(--fire)">為什麼選 v8 不選其他版本？</strong> v5 是舊款（2020）、v9/v10 太新且社群資源少；v8（2023）是目前文件最完整、社群最活躍的穩定版，且內建一鍵匯出 ONNX 格式，直接支援 Pi 部署。
+      </p>
     </div>
     <div class="card">
       <div class="icon">⚙️</div>
@@ -327,6 +333,7 @@ flowchart LR
   style G fill:#222836,stroke:#ff9558,color:#fff
     </div>
   </div>
+  <p class="note" style="margin-top:12px">💡 第一次看到 <code>640×480 → 320×320</code>、<code>2100 個候選框</code> 這些數字會懵？沒關係——下面 6 個按鈕點下去，每個步驟都有白話解釋與圖示。</p>
   <div class="step-btns">
     <button class="step-btn" data-modal="m-lb"><span class="num">①</span> Letterbox 等比縮放</button>
     <button class="step-btn" data-modal="m-pre"><span class="num">②</span> Preprocess 前處理</button>
@@ -390,6 +397,7 @@ flowchart TB
         <div style="display:none;height:200px;align-items:center;justify-content:center;color:var(--muted);font-size:13px">gif/result_detect.gif</div>
       </div>
       <p class="gif-caption">煙霧偵測 ・ 矩形框畫法 ・ 紅框 = fire ／ 灰框 = smoke</p>
+      <p style="font-size:11px;color:var(--muted);margin-top:4px;text-align:center">※ 兩邊 GIF 為不同時間點取材，僅示意兩種畫法差異，並非同一畫面對照</p>
       <div class="card" style="margin-top:12px">
         <p style="font-size:13px;line-height:1.75">
           最簡單的畫法：用「最小可包圍的矩形」圈住 AI 認定是火/煙的區域。
@@ -417,6 +425,7 @@ flowchart TB
         <div style="display:flex;gap:6px;justify-content:center;margin-top:6px;font-size:11px;color:var(--muted)" id="contourLabel">
           煙霧顏色輪廓（test1 前段）
         </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:4px;text-align:center">※ 兩邊 GIF 為不同時間點取材，僅示意兩種畫法差異，並非同一畫面對照</p>
       </div>
       <div class="card" style="margin-top:12px">
         <p style="font-size:13px;line-height:1.75">
@@ -442,34 +451,56 @@ flowchart TB
 <section class="slide" id="s6">
   <span class="slide-num">06 / 08</span>
   <h3 class="kicker">開發歷程</h3>
-  <h2 class="h">從零到部署，走過的七個關卡</h2>
+  <h2 class="h">從零到部署，走過的八個關卡</h2>
   <div class="timeline" style="margin-top:14px;font-size:14px">
     <div class="timeline-item">
       <h5>① 找模型 ・ 不從零訓練</h5>
-      <p>使用 GitHub 上已用大量火災照片訓練好的 YOLOv8n 權重（.pt 檔）。省掉數週訓練時間。</p>
+      <p>使用 GitHub 上已用大量火災照片訓練好的 <strong>YOLOv8n</strong> 權重（.pt 檔）。n = Nano，YOLOv8 家族最輕量的版本，專為 Pi 這類低算力設備設計。省掉自己標注資料 + 數週訓練的時間。</p>
     </div>
     <div class="timeline-item">
       <h5>② 匯出 ONNX 通用格式</h5>
-      <p>PyTorch 格式 (.pt) 只能在有 PyTorch 的電腦上跑。轉成 ONNX 後，Pi 只需安裝 onnxruntime，不需要 PyTorch（省記憶體、省空間）。</p>
+      <p>PyTorch 格式 (.pt) 只能在有 PyTorch 的電腦上跑，Pi 沒有 PyTorch。用 <code class="mono" style="color:var(--accent)">export_onnx.py</code> 把 .pt「翻譯」成 ONNX 通用格式，Pi 只需安裝輕量的 onnxruntime 即可執行。</p>
     </div>
     <div class="timeline-item">
       <h5>③ 開發機驗證</h5>
-      <p>先在 Windows + RTX 顯卡跑通，確認偵測正確、速度超過 100 FPS。</p>
+      <p>先在 Windows + RTX 顯卡跑通，確認偵測正確、速度超過 100 FPS。確保程式本身沒問題，再搬到 Pi。</p>
     </div>
     <div class="timeline-item">
-      <h5>④ 部署 Raspberry Pi 4B</h5>
-      <p>安裝 onnxruntime + opencv-headless（無桌面版本），FP32 模型在 Pi 上約 <strong>11 FPS</strong>，勉強達標。</p>
+      <h5>④ 把 YOLOv8n 塞進樹莓派（FP32）</h5>
+      <p>
+        <strong>步驟一</strong>：用 <code class="mono" style="color:var(--accent)">scp</code> 指令或隨身碟把 <code>.onnx</code> 模型複製到 Pi。<br>
+        <strong>步驟二</strong>：Pi 上安裝 <code class="mono" style="color:var(--accent)">pip install onnxruntime opencv-python-headless</code>（headless 版本沒有桌面 GUI，省記憶體）。<br>
+        <strong>步驟三</strong>：直接執行 <code class="mono" style="color:var(--accent)">python main.py --video test.mp4 --model best.onnx</code>，Pi 跑得起來！<br>
+        FP32 模型在 Pi 上約 <strong>~2.0 FPS</strong>，能跑但偵測更新速度慢。
+      </p>
     </div>
     <div class="timeline-item">
-      <h5>⑤ INT8 量化（踩坑）</h5>
-      <p>想加速 → 用 <code class="mono" style="color:var(--accent)">quantize_dynamic</code> 把模型壓縮 4 倍。結果 Pi 直接報錯：「ARM CPU 不支援 ConvInteger 算子」。模型一個都跑不了。</p>
+      <h5>⑤ INT8 量化——在 PC 上做，不是 Pi 上！（踩坑）</h5>
+      <p>
+        「量化」= 把模型內部的<strong>小數點數字（FP32 / 32-bit）</strong>壓縮成<strong>整數（INT8 / 8-bit）</strong>——體積縮 4 倍、理論加速 2-4 倍。<br>
+        <strong>這個壓縮動作在 PC 上完成</strong>（執行 <code class="mono" style="color:var(--accent)">quantize_int8.py</code>），產出新的量化版 <code>.onnx</code> 檔，再傳到 Pi 去跑。<br>
+        第一版用 <code class="mono" style="color:var(--accent)">quantize_dynamic</code>，Pi 直接報錯：「ARM CPU 不支援 ConvInteger 算子」。模型一個都跑不了。
+      </p>
     </div>
     <div class="timeline-item">
       <h5>⑥ 改用 QDQ 靜態量化（解決）</h5>
-      <p>改用 <code class="mono" style="color:var(--accent)">quantize_static + QDQ + per_channel=False</code>，產生 ARM 相容的 QLinearConv 算子。Pi 上順利跑起來，FPS 提升至 <strong>~14</strong>。</p>
+      <p>
+        <strong>QDQ 是什麼？</strong> Q = Quantize（變整數）、D = DeQuantize（變回小數）、Q = Quantize（再變整數）。<br>
+        白話：在模型每一層的算子前後插入「轉換標記」，讓 ONNX Runtime 在 Pi 上能改用 <strong>ARM CPU 認得的 QLinearConv 算子</strong>執行，而不是 Pi 不支援的 ConvInteger。<br>
+        加上 <code class="mono" style="color:var(--accent)">per_channel=False</code>（整層共用一組量化參數，ARM 才支援），Pi 終於順利跑起來。<br>
+        FPS 從 ~2.0 提升至 <strong>3.6 FPS</strong>（提升約 80%）。
+      </p>
     </div>
     <div class="timeline-item">
-      <h5>⑦ 視覺化升級</h5>
+      <h5>⑦ 跳幀（--skip）——讓 3.6 FPS 看起來更流暢</h5>
+      <p>
+        即使 INT8 也只有 3.6 FPS，怎麼讓畫面「不那麼卡」？<br>
+        「跳幀」= 每 N 幀才呼叫一次 AI 推論，中間幀直接沿用上次的偵測框。<br>
+        火焰移動慢，連續幾幀內位置差不多，肉眼幾乎看不出延遲。設 <code class="mono" style="color:var(--accent)">--skip 2</code>，使用體驗接近 7 FPS。
+      </p>
+    </div>
+    <div class="timeline-item">
+      <h5>⑧ 視覺化升級</h5>
       <p>加入 <code class="mono" style="color:var(--accent)">--contour</code>，HSV 色彩分析讓標示貼合火焰真實形狀，只多 4% 運算成本。</p>
     </div>
   </div>
@@ -511,26 +542,27 @@ flowchart TB
   <div class="grid-4" style="margin-top:12px">
     <div class="stat"><span class="val">119</span><span class="lbl">開發機 ・ FP32 ・ 320</span></div>
     <div class="stat"><span class="val">70</span><span class="lbl">開發機 ・ FP32 ・ 416</span></div>
-    <div class="stat"><span class="val">~11</span><span class="lbl">Pi 4B ・ FP32 ・ 320</span></div>
-    <div class="stat"><span class="val">~14</span><span class="lbl">Pi 4B ・ INT8 ・ 320</span></div>
+    <div class="stat"><span class="val">~2.0</span><span class="lbl">Pi 4B ・ FP32 ・ 320（粗估）</span></div>
+    <div class="stat"><span class="val">3.6</span><span class="lbl">Pi 4B ・ INT8 ・ 320（實測）</span></div>
   </div>
-  <p class="note" style="margin-top:8px">單位：FPS（每秒幾幀）。人眼覺得「流暢」的下限約 10 FPS。</p>
+  <p class="note" style="margin-top:8px">單位：FPS（每秒幾幀）。開發機結果供效能對比；Pi 4B 為實際嵌入式部署環境，FP32 為粗估值。</p>
   <div class="grid-2" style="margin-top:20px">
     <div class="card">
       <h4>📊 從這些數字學到什麼？</h4>
       <p style="line-height:2">
         ・ 桌機跑 320 → 119 FPS，遠超即時需求<br>
-        ・ Pi 跑同設定 → 11 FPS，算力約桌機的 1/10<br>
-        ・ INT8 量化後 → ~14 FPS（+30%），對 Pi 是明顯提升<br>
-        ・ 416 解析度在 Pi 上僅 7 FPS，低於目標，不建議
+        ・ Pi 跑同設定 → 約 2.0 FPS，算力約桌機的 1/60<br>
+        ・ INT8 量化（QDQ）後 → 3.6 FPS（提升約 80%），對 Pi 是顯著加速<br>
+        ・ 加上 <code>--skip 2</code> 跳幀，實際使用體驗接近 7 FPS
       </p>
     </div>
     <div class="card">
-      <h4>🎯 為什麼目標定在「10 FPS 以上」？</h4>
+      <h4>🎯 為什麼 3.6 FPS 已經夠用？</h4>
       <p style="line-height:2">
-        低於 10 FPS 會看起來卡頓、像慢動作。火災偵測不需要電玩等級的 60 FPS，
-        但至少 10 FPS 才能即時追蹤火勢蔓延方向。
-        FP32 模型在 Pi 上剛好達標（~11），INT8 則多了安全餘量（~14）。
+        一般遊戲需要 60 FPS 才流暢，但<strong>火災偵測不是電玩</strong>：<br>
+        ・ 火焰蔓延速度通常每秒幾公分，3.6 FPS（約 280ms 一次偵測）已能即時追蹤<br>
+        ・ 系統定位是「警報觸發器」，不是「即時直播」——偵測到火 → 觸發警報 → 通知人，3.6 FPS 完全足夠<br>
+        ・ 用 Pi 4B（約 1500 元台幣）做到本機 AI 即時偵測、<strong>不需網路</strong>，這才是嵌入式 AI 的勝利條件
       </p>
     </div>
   </div>
@@ -554,7 +586,9 @@ flowchart TB
   <div class="modal-inner">
     <button class="close-btn" data-close>×</button>
     <h3>① Letterbox 等比縮放</h3>
-    <p>AI 模型只吃 <strong style="color:var(--fire)">320 × 320 的正方形圖</strong>，但影片通常是 640×480 的長方形——如果直接硬縮，火焰會被壓扁變形，AI 就認不出來了。</p>
+    <p><strong style="color:var(--fire)">為什麼影片是 640×480？</strong><br>Pi Camera 預設輸出 480p（640 寬 × 480 高），這是樹莓派相機的「出廠口味」，省頻寬也夠用。一般電腦鏡頭或測試影片也常是這個解析度。</p>
+    <p><strong style="color:var(--fire)">為什麼模型只吃 320×320？</strong><br>YOLOv8 訓練時就設定「輸入必須是固定大小的正方形」，數字越大偵測越準但越慢。我們選 320 是 Pi CPU 跑得動的甜蜜點——夠快、夠準。</p>
+    <p><strong>問題：640×480 是長方形，320×320 是正方形——直接硬塞會把火焰壓扁變形，AI 就認不出來了。</strong></p>
     <p><strong>解法：等比縮放 + 灰邊填滿（像電影院的 letterbox 黑邊）</strong></p>
     <div class="modal-diagram">
       <div class="box">原始畫面<br>640 × 480</div>
@@ -577,7 +611,9 @@ dh = (320 - nh) / 2              <span class="c"># 上下各填這麼多灰</spa
   <div class="modal-inner">
     <button class="close-btn" data-close>×</button>
     <h3>② Preprocess 前處理</h3>
-    <p>把畫面轉成 AI 模型「看得懂」的數字格式。共三個動作：</p>
+    <p><strong style="color:var(--fire)">什麼是「數字矩陣」（Tensor）？</strong><br>
+    AI 看不懂 JPG / PNG 圖檔——它只認得「一大堆數字」。一張 320×320 的彩色圖 = 320×320×3 = <strong>307,200 個數字</strong>（每個像素有 R、G、B 三個亮度值，範圍 0–255）。把這堆數字排成 AI 喜歡的形狀，就叫做 <strong>Tensor（張量 / 數字矩陣）</strong>。</p>
+    <p>接下來三個步驟，就是把「人類看的圖」翻譯成「AI 看的數字矩陣」：</p>
     <ul>
       <li><strong style="color:var(--fire)">BGR → RGB</strong>：OpenCV 讀進來的畫面色彩順序是藍-綠-紅（BGR），但 AI 訓練時用紅-綠-藍（RGB）。不換的話顏色辨識會全錯。</li>
       <li><strong style="color:var(--fire)">÷ 255</strong>：像素值原本是 0–255 的整數，AI 喜歡 0–1 的小數。把所有數值除以 255，讓模型計算更穩定。</li>
@@ -760,6 +796,7 @@ ret, frame = cap.read()       <span class="c"># 第 N 幀才真正讀取</span><
   <div class="modal-inner">
     <button class="close-btn" data-close>×</button>
     <h3>④ 跳幀推論（--skip）</h3>
+    <p><strong style="color:var(--fire)">白話比喻：</strong>想像你在用監視器找小偷。如果每 0.03 秒（30 FPS）都認真看一次，眼睛會累死。實際上你可能每 0.3 秒瞄一下就夠了——小偷不會在 0.03 秒內就消失。AI 偵測火災也是同理：每幀都跑推論太奢侈，<strong>跳幀是把寶貴的運算用在刀口上</strong>。</p>
     <p>AI 推論是最耗時的步驟（Pi 上約 90ms / 幀）。<code>--skip N</code> 讓程式<strong>每 N 幀才呼叫一次 detector</strong>，中間幀沿用上次結果。</p>
     <ul>
       <li><code>--skip 1</code>（預設）：每幀都推論，最準確</li>
