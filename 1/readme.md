@@ -48,31 +48,7 @@
 
 ## 三、系統架構圖
 
-```mermaid
-flowchart TB
-    subgraph DEV["開發機（RTX 3060 Ti）"]
-        A[原始 .pt 權重\nluminous0219/fire-yolov8] --> B[ultralytics export\nformat=onnx, simplify=True]
-        B --> C[fire_smoke_yolov8n_320.onnx\n11.58 MB FP32]
-        C --> D[onnxruntime.quantization\nquantize_dynamic INT8]
-        D --> E[fire_smoke_yolov8n_320_int8.onnx\n3.08 MB]
-    end
-
-    subgraph PI["Raspberry Pi 4B（部署目標）"]
-        F[影片輸入\n.mp4 / Pi Camera]
-        G[detector.py\nYoloFireSmokeDetector]
-        H[pipeline.py\n主幀迴圈]
-        I[visualize.py\n視覺化渲染]
-        J[輸出\nimshow / mp4]
-    end
-
-    C -.->|scp 傳檔| G
-    E -.->|INT8 優化版| G
-
-    F --> H
-    H --> G
-    G --> I
-    I --> J
-```
+![流程圖](./img/流程圖.png)
 
 ### 模組職責
 
