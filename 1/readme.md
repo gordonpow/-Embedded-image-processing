@@ -42,40 +42,7 @@
 
 ## 二、功能分解圖 BREAKDOWN
 
-```mermaid
-mindmap
-  root((火煙偵測系統))
-    輸入模組
-      影片檔讀取 VideoCapture
-      逐幀解碼
-      解析度與 FPS 取得
-    前處理模組
-      Letterbox 等比縮放
-      灰邊 Padding 至正方形
-      BGR→RGB 色彩轉換
-      像素值正規化 /255
-    推理模組
-      ONNX Runtime Session 載入
-      NCHW Tensor 封裝
-      CPU 多核心推理 4 threads
-    後處理模組
-      原始輸出 transpose
-      信心值過濾 conf threshold
-      座標反算 imgsz→原圖
-      NMS 去重複框
-    視覺化模組
-      Bounding Box 繪製
-      類別標籤與信心值標注
-      EMA FPS 計算與顯示
-    輸出模組
-      imshow 即時預覽
-      VideoWriter 標注影片輸出
-      Benchmark CSV 匯出
-    優化模組
-      INT8 動態量化
-      Frame Skip 跳幀
-      Motion Gating
-```
+![Breakdown](./img/Breakdown.png)
 
 ---
 
@@ -309,6 +276,26 @@ python benchmarks/run_benchmark.py \
 | 前段 | 中段 | 後段 |
 |:----:|:----:|:----:|
 | ![test2 前段](./gif/test2_start.gif) | ![test2 中段](./gif/test2_mid.gif) | ![test2 後段](./gif/test2_end.gif) |
+
+### Case 3 (Pi)：fire.mp4（202x360）
+
+| 原始影片 | contour | box |
+|:----:|:----:|:----:|
+| ![fire](./gif/fire.gif) | ![contour](./gif/output_contour.gif) | ![box](./gif/output_pi_box.gif) |
+
+### Case 4 (Pi)：fire.mp4（202x360）
+
+| 原始影片 | contour | box |
+|:----:|:----:|:----:|
+| ![fire](./gif/fire_1.gif) | ![contour](./gif/fire_1_contour.gif) | ![box](./gif/fire_1_box.gif) |
+
+### Case 5 (Pi)：fire.mp4（202x360）
+
+| 原始影片 | contour | box |
+|:----:|:----:|:----:|
+| ![fire](./gif/fire_2.gif) | ![contour](./gif/fire_2_contour.gif) | ![box](./gif/fire_2_box.gif) |
+
+
 
 ### 案例量化結果
 

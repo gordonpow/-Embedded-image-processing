@@ -4,5 +4,5 @@ models/*.onnx
 models/*.pt
 __pycache__/
 *.pyc
-output_*.mp4
+*.mp4
 benchmarks/*.csv
