@@ -43,12 +43,12 @@ def draw_pose_overlay(
     # Each entry: (中文, English-fallback, colour).
     # Label and value are separated by a colon for readability ("場景：戶外").
     if yaw_na:
-        lines = [("偏航：無", "YAW: N/A", cyan)]
+        lines = [("Yaw: N/A", "Yaw: N/A", cyan)]
     else:
-        lines = [(f"偏航：{yaw:+6.1f}°", f"YAW: {yaw:+6.1f}", green)]
+        lines = [(f"Yaw: {yaw:+6.1f}°", f"Yaw: {yaw:+6.1f}", green)]
     lines += [
-        (f"俯仰：{pitch:+6.1f}°", f"PIT: {pitch:+6.1f}", green),
-        (f"側傾：{roll:+6.1f}°", f"ROL: {roll:+6.1f}", green),
+        (f"Pitch: {pitch:+6.1f}°", f"Pitch: {pitch:+6.1f}", green),
+        (f"Roll: {roll:+6.1f}°", f"Roll: {roll:+6.1f}", green),
     ]
     if show_fps:
         lines.append((f"幀率：{fps:.1f}  {w}x{h}", f"FPS: {fps:.1f} {w}x{h}", grey))
