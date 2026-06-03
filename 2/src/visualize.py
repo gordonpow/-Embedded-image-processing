@@ -12,15 +12,48 @@ def draw_pose_overlay(
     npts: int,
     w: int,
     h: int,
+    scene: str | None = None,
+    scene_conf: float | None = None,
+    cam_motion: str | None = None,
+    flow: str | None = None,
+    zoom_in: bool = False,
+    depth_level: str | None = None,
+    pose_na: bool = False,
 ) -> None:
-    """Draw yaw/pitch/roll + FPS + inlier stats as text in the top-left corner."""
-    lines = [
-        (f"YAW  {yaw:+7.1f} deg", (0, 255, 0)),
-        (f"PIT  {pitch:+7.1f} deg", (0, 255, 0)),
-        (f"ROL  {roll:+7.1f} deg", (0, 255, 0)),
+    """
+    Draw yaw/pitch/roll + FPS + inlier stats in the top-left corner.
+
+    When scene/motion/depth values are supplied, three extra lines are added:
+        SCN <indoor/outdoor> <conf>
+        MOV <cam_dir> / <flow_dir>[ ZOOM]
+        DEP <near/mid/far>
+    ``pose_na=True`` renders yaw/pitch/roll as N/A (single-image mode).
+    """
+    cyan = (255, 220, 120)
+    if pose_na:
+        pose_lines = [
+            ("YAW    N/A", cyan), ("PIT    N/A", cyan), ("ROL    N/A", cyan),
+        ]
+    else:
+        pose_lines = [
+            (f"YAW  {yaw:+7.1f} deg", (0, 255, 0)),
+            (f"PIT  {pitch:+7.1f} deg", (0, 255, 0)),
+            (f"ROL  {roll:+7.1f} deg", (0, 255, 0)),
+        ]
+    lines = pose_lines + [
         (f"FPS  {fps:5.1f}  {w}x{h}", (200, 200, 200)),
         (f"PTS  {npts:4d}  INL {inliers:4d}", (200, 200, 200)),
     ]
+
+    if scene is not None:
+        conf_txt = f" {scene_conf:.2f}" if scene_conf is not None else ""
+        lines.append((f"SCN  {scene}{conf_txt}", cyan))
+    if cam_motion is not None or flow is not None:
+        zoom_txt = " ZOOM" if zoom_in else ""
+        lines.append((f"MOV  {cam_motion or '-'} / {flow or '-'}{zoom_txt}", cyan))
+    if depth_level is not None:
+        lines.append((f"DEP  {depth_level}", cyan))
+
     x, y0, dy = 10, 28, 24
     for i, (text, color) in enumerate(lines):
         y = y0 + i * dy
