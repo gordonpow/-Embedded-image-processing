@@ -68,8 +68,15 @@ flowchart TD
 │   ├── scene.py       室內/戶外：SceneClassifier(cv2.dnn+Places365) + 古典 HSV fallback
 │   ├── motion.py      camera_motion(t) + flow_direction(內點) → 動態方向 / zoom
 │   ├── depth.py       triangulatePoints → 相對稀疏深度 + NEAR/MID/FAR
-│   ├── orient.py      單圖水平線 → roll/pitch（Canny+HoughLinesP）+ ypr_to_R
-│   └── visualize.py   draw_pose_overlay（含 SCN/MOV/DEP）+ draw_orientation_indicator
+│   ├── orient.py      單圖 roll/pitch + 水平線/垂直線/消失點偵測 + ypr_to_R
+│   ├── draw_cv.py     中文 HUD(PIL，無字型退回英文) + CV證據繪製
+│   │                  （光流箭頭 / 水平線 / 特徵+梯度場 / 消失點）
+│   └── visualize.py   draw_pose_overlay（中文化）+ draw_orientation_indicator
+├── benchmarks/
+│   ├── metrics.py        角度誤差 / 分類準確率（驗收度量）
+│   ├── validate_pose.py  姿態 vs 合成 GT → MAE/RMSE + PASS/FAIL
+│   ├── validate_scene.py 室內/戶外 vs 標註 → 準確率 + PASS/FAIL
+│   └── labels_demo.csv   6 張示範圖的室內/戶外標準答案
 ├── models/
 │   ├── export_places365_onnx.py  一次性：下載+轉 Places365 ResNet18 → ONNX
 │   ├── io_places365.txt          365 行 1=室內/2=戶外
@@ -298,4 +305,6 @@ K = [[W, 0, W/2],
 ---
 
 ## Last Updated
-2026-06-03 — 室內/戶外改用 `cv2.dnn` + Places365 ResNet18（保留 HSV fallback，準確率 3/6→6/6）；新增 `orient.py` 單圖水平線傾斜 → XYZ；單圖 overlay 移除 FPS、yaw=N/A 而 roll/pitch 由水平線估計；新增 `models/` 與 `--scene-model/--scene-io`。前次：新增 scene/motion/depth、estimator 9-tuple、單圖分支、webcam、CSV 15 欄、tests/。
+2026-06-03（c）— **修正 estimator 旋轉過度累積 bug**：`R_global=R_global@R` 每幀乘且參考幀持續多幀 → 過度累積（合成 GT 上 MAE 60–100°）；改 keyframe 相對累積 `R_base@R`，MAE→13°。新增驗收框架：`benchmarks/metrics|validate_pose|validate_scene`、`gen_synthetic3d.py`（3D 視差 + 精確 GT）、`docs/validation.md`。新增 `draw_cv.py`：中文 HUD（PIL）+ CV 證據繪製（影片光流箭頭 / 單圖水平線+特徵梯度場+消失點）。
+前次（b）— 室內/戶外改 `cv2.dnn`+Places365（3/6→6/6，HSV fallback）；`orient.py` 單圖水平線→XYZ。
+前次（a）— 新增 scene/motion/depth、estimator 9-tuple、單圖分支、webcam、CSV 15 欄、tests/。

@@ -1,7 +1,12 @@
 """
 Generate a synthetic test video with known yaw/pitch/roll profile.
 Renders a textured 3D scene with rich features for ORB matching.
+
+Also writes the GROUND TRUTH (synthetic_pose_gt.csv) — the exact yaw/pitch/roll
+used to render each frame — so the estimator can be validated quantitatively
+(see benchmarks/validate_pose.py).
 """
+import csv
 import cv2
 import numpy as np
 import math
@@ -12,8 +17,12 @@ FPS  = 30
 DURATION_S = 20   # 10s yaw sweep, 5s pitch, 5s roll
 
 out_path = os.path.join(os.path.dirname(__file__), "synthetic_pose_test.mp4")
+gt_path = os.path.join(os.path.dirname(__file__), "synthetic_pose_gt.csv")
 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 writer = cv2.VideoWriter(out_path, fourcc, FPS, (W, H))
+gt_file = open(gt_path, "w", newline="", encoding="utf-8")
+gt_writer = csv.writer(gt_file)
+gt_writer.writerow(["frame_idx", "yaw_deg", "pitch_deg", "roll_deg"])
 
 # --- Build a rich textured background (wall of dots + grid) ---
 BG = np.zeros((H * 4, W * 4, 3), dtype=np.uint8) + 40
@@ -96,6 +105,7 @@ for i in range(total_frames):
         roll  = 30.0 * math.sin(2 * math.pi * (t - 14) / 6)
 
     frame = render_frame(yaw, pitch, roll)
+    gt_writer.writerow([i, f"{yaw:.4f}", f"{pitch:.4f}", f"{roll:.4f}"])
 
     # Annotate ground truth
     cv2.putText(frame, f"GT YAW  {yaw:+6.1f}", (10, 25),
@@ -108,4 +118,6 @@ for i in range(total_frames):
     writer.write(frame)
 
 writer.release()
+gt_file.close()
 print(f"[gen] saved → {out_path}  ({total_frames} frames, {DURATION_S}s @ {FPS}fps)")
+print(f"[gen] ground truth → {gt_path}")

@@ -12,7 +12,12 @@ from visualize import draw_pose_overlay, draw_orientation_indicator
 from scene import classify_indoor_outdoor, SceneClassifier
 from motion import camera_motion, flow_direction
 from depth import relative_depth
-from orient import estimate_orientation_from_image, ypr_to_R
+from orient import (
+    ypr_to_R, detect_horizon, detect_vertical_lines, vanishing_point,
+)
+from draw_cv import (
+    draw_flow_arrows, draw_horizon, draw_feature_gradient, draw_vertical_vp,
+)
 
 _EMA_ALPHA = 0.1        # FPS smoothing — same factor as folder-1 fire detector
 _SCENE_INTERVAL = 10    # recompute indoor/outdoor every N frames (Pi-friendly)
@@ -134,6 +139,9 @@ def _run_stream(args, cap_arg) -> dict:
         rel_d, depth_level = relative_depth(K, R_rel, t_vec, pts1_in, pts2_in)
         rel_d_str = "N/A" if (rel_d != rel_d) else f"{rel_d:.2f}"   # nan check
 
+        # Real optical-flow arrows from the matched inliers (drawn under the HUD).
+        draw_flow_arrows(frame, pts1_in, pts2_in)
+
         timestamp = frame_idx / src_fps
         csv_writer.writerow([
             frame_idx, f"{timestamp:.3f}",
@@ -198,8 +206,12 @@ def _run_image(args, path) -> dict:
     scene_label, scene_conf = classify_indoor_outdoor(img, classifier)
 
     # Single-image orientation: roll/pitch from the horizon (yaw unobservable).
-    roll, pitch = estimate_orientation_from_image(img)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    det = detect_horizon(img)
+    roll, pitch = det["roll"], det["pitch"]
     R_img = ypr_to_R(0.0, pitch, roll)
+    vsegs = detect_vertical_lines(img)
+    vp = vanishing_point(vsegs)
 
     out_mp4, out_csv = _output_paths(args)
     out_png = os.path.splitext(out_csv)[0] + ".png"
@@ -214,7 +226,13 @@ def _run_image(args, path) -> dict:
             "N/A", "N/A",
         ])
 
-    # Annotated still: slim overlay (no FPS / stats) + XYZ gizmo from horizon tilt.
+    # CV evidence drawn on the image (under the HUD): ORB features + gradient
+    # field, detected horizon lines, vertical lines + vanishing point.
+    draw_feature_gradient(img, gray)
+    draw_vertical_vp(img, vsegs, vp)
+    draw_horizon(img, det)
+
+    # Slim HUD (no FPS / stats) + XYZ gizmo from the horizon tilt.
     draw_pose_overlay(
         img, 0.0, pitch, roll, 0.0, 0, 0, tgt_w, tgt_h,
         scene=scene_label, scene_conf=scene_conf,

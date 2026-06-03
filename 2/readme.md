@@ -65,7 +65,7 @@ flowchart LR
     OUT_CSV --> PLOT[plot_poses.py\n→ PNG 曲線]
 ```
 
-詳細設計見 [`docs/architecture.md`](docs/architecture.md)。
+詳細設計見 [`docs/architecture.md`](docs/architecture.md)；**驗收方法與標準答案**見 [`docs/validation.md`](docs/validation.md)。
 
 ---
 

@@ -45,6 +45,11 @@ class PoseEstimator:
         self._alpha = smooth_alpha
 
         self._R_global: np.ndarray = np.eye(3, dtype=np.float64)
+        # Absolute rotation captured when the current reference frame was set.
+        # recoverPose returns reference->current rotation, so the absolute pose
+        # is R_base @ R — NOT an every-frame product (that over-accumulates when
+        # the reference persists across many frames).
+        self._R_base: np.ndarray = np.eye(3, dtype=np.float64)
         self._ref_kp = None
         self._ref_des = None
         self._K: np.ndarray | None = None
@@ -64,6 +69,7 @@ class PoseEstimator:
 
     def reset(self) -> None:
         self._R_global = np.eye(3, dtype=np.float64)
+        self._R_base = np.eye(3, dtype=np.float64)
         self._ref_kp = None
         self._ref_des = None
         self._yaw_ema = self._pitch_ema = self._roll_ema = 0.0
@@ -98,12 +104,12 @@ class PoseEstimator:
 
         # Not enough descriptors — set as reference and return current pose
         if self._ref_kp is None or des is None or len(des) < 8:
-            self._ref_kp, self._ref_des = kp, des
+            self._set_reference(kp, des)
             yaw, pitch, roll = self._smoothed_angles(-1)
             return yaw, pitch, roll, -1, npts, None, None, _EMPTY_PTS, _EMPTY_PTS
 
         if self._ref_des is None or len(self._ref_des) < 8:
-            self._ref_kp, self._ref_des = kp, des
+            self._set_reference(kp, des)
             yaw, pitch, roll = self._smoothed_angles(-1)
             return yaw, pitch, roll, -1, npts, None, None, _EMPTY_PTS, _EMPTY_PTS
 
@@ -117,7 +123,7 @@ class PoseEstimator:
                     good.append(m)
 
         if len(good) < 8:
-            self._ref_kp, self._ref_des = kp, des
+            self._set_reference(kp, des)
             yaw, pitch, roll = self._smoothed_angles(-1)
             return yaw, pitch, roll, -1, npts, None, None, _EMPTY_PTS, _EMPTY_PTS
 
@@ -132,7 +138,7 @@ class PoseEstimator:
         )
 
         if E is None or mask is None:
-            self._ref_kp, self._ref_des = kp, des
+            self._set_reference(kp, des)
             yaw, pitch, roll = self._smoothed_angles(-1)
             return yaw, pitch, roll, -1, npts, None, None, _EMPTY_PTS, _EMPTY_PTS
 
@@ -147,15 +153,20 @@ class PoseEstimator:
         pts1_in = pts1[inlier_mask]
         pts2_in = pts2[inlier_mask]
 
-        # --- Rotation magnitude gate ---
-        # reject R if it implies an unrealistically large per-frame rotation
-        angle_rad = _rot_angle(R)
-        if angle_rad <= self._max_angle_rad:
-            self._R_global = _orthonormalize(self._R_global @ R)
+        # Keyframe-relative absolute rotation: R is reference->current and
+        # R_base is the absolute pose captured when that reference was set.
+        R_candidate = _orthonormalize(self._R_base @ R)
 
-        # Spawn new keyframe when tracking quality degrades
+        # Per-frame delta gate: reject this estimate if the change from the last
+        # accepted pose is implausibly large (noisy essential matrix).
+        delta_angle = _rot_angle(self._R_global.T @ R_candidate)
+        if delta_angle <= self._max_angle_rad:
+            self._R_global = R_candidate
+
+        # Spawn new keyframe when tracking quality degrades; freeze the current
+        # absolute pose as the new base so accumulation stays consistent.
         if inlier_ratio < self._kf_min_ratio or inlier_count < self._kf_min_inliers:
-            self._ref_kp, self._ref_des = kp, des
+            self._set_reference(kp, des)
 
         yaw, pitch, roll = self._smoothed_angles(inlier_count)
         return yaw, pitch, roll, inlier_count, npts, R, t, pts1_in, pts2_in
@@ -163,6 +174,11 @@ class PoseEstimator:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _set_reference(self, kp, des) -> None:
+        """Adopt a new reference frame and freeze the current absolute pose."""
+        self._R_base = self._R_global.copy()
+        self._ref_kp, self._ref_des = kp, des
 
     def _smoothed_angles(self, inliers: int) -> tuple[float, float, float]:
         """Return EMA-smoothed yaw/pitch/roll from current R_global."""

@@ -11,3 +11,7 @@ runs/*.png
 # Large model weights — regenerate via models/export_places365_onnx.py
 models/*.onnx
 models/*.pth.tar
+
+# Large/generated test videos — regenerate via test_inputs/gen_*.py
+# (the small ground-truth CSVs are kept for reproducible acceptance tests)
+test_inputs/*.mp4

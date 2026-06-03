@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+from draw_cv import render_text_lines, tr_value
+
 
 def draw_pose_overlay(
     frame: np.ndarray,
@@ -35,33 +37,35 @@ def draw_pose_overlay(
     overlay.
     """
     cyan = (255, 220, 120)
-    yaw_line = ("YAW    N/A", cyan) if yaw_na else (f"YAW  {yaw:+7.1f} deg", (0, 255, 0))
-    lines = [
-        yaw_line,
-        (f"PIT  {pitch:+7.1f} deg", (0, 255, 0)),
-        (f"ROL  {roll:+7.1f} deg", (0, 255, 0)),
+    green = (0, 255, 0)
+    grey = (200, 200, 200)
+
+    # Each entry: (中文, English-fallback, colour)
+    if yaw_na:
+        lines = [("偏航  無", "YAW  N/A", cyan)]
+    else:
+        lines = [(f"偏航 {yaw:+6.1f}°", f"YAW {yaw:+6.1f}", green)]
+    lines += [
+        (f"俯仰 {pitch:+6.1f}°", f"PIT {pitch:+6.1f}", green),
+        (f"側傾 {roll:+6.1f}°", f"ROL {roll:+6.1f}", green),
     ]
     if show_fps:
-        lines.append((f"FPS  {fps:5.1f}  {w}x{h}", (200, 200, 200)))
+        lines.append((f"幀率 {fps:.1f}  {w}x{h}", f"FPS {fps:.1f} {w}x{h}", grey))
     if show_stats:
-        lines.append((f"PTS  {npts:4d}  INL {inliers:4d}", (200, 200, 200)))
-
+        lines.append((f"特徵 {npts}  內點 {inliers}", f"PTS {npts} INL {inliers}", grey))
     if scene is not None:
-        conf_txt = f" {scene_conf:.2f}" if scene_conf is not None else ""
-        lines.append((f"SCN  {scene}{conf_txt}", cyan))
+        conf = f" {scene_conf:.2f}" if scene_conf is not None else ""
+        lines.append((f"場景 {tr_value(scene)}{conf}", f"SCN {scene}{conf}", cyan))
     if cam_motion is not None or flow is not None:
-        zoom_txt = " ZOOM" if zoom_in else ""
-        lines.append((f"MOV  {cam_motion or '-'} / {flow or '-'}{zoom_txt}", cyan))
+        zoom_zh = " 推近" if zoom_in else ""
+        zoom_en = " ZOOM" if zoom_in else ""
+        lines.append((
+            f"運動 {tr_value(cam_motion or 'N/A')} / {tr_value(flow or 'N/A')}{zoom_zh}",
+            f"MOV {cam_motion or '-'} / {flow or '-'}{zoom_en}", cyan))
     if depth_level is not None:
-        lines.append((f"DEP  {depth_level}", cyan))
+        lines.append((f"深度 {tr_value(depth_level)}", f"DEP {depth_level}", cyan))
 
-    x, y0, dy = 10, 28, 24
-    for i, (text, color) in enumerate(lines):
-        y = y0 + i * dy
-        cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.58, (0, 0, 0), 3, cv2.LINE_AA)   # black stroke
-        cv2.putText(frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX,
-                    0.58, color, 1, cv2.LINE_AA)        # colored fill
+    render_text_lines(frame, lines, x=10, y0=20, dy=30, size=22)
 
 
 def draw_orientation_indicator(

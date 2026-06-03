@@ -11,7 +11,13 @@ import math
 import cv2
 import numpy as np
 
-from orient import estimate_orientation_from_image, ypr_to_R
+from orient import (
+    estimate_orientation_from_image,
+    ypr_to_R,
+    detect_horizon,
+    detect_vertical_lines,
+    vanishing_point,
+)
 
 
 def _tilted_horizon(angle_deg, y_center=None, w=640, h=480):
@@ -70,3 +76,44 @@ def test_ypr_to_R_roundtrips_with_estimator_decomposition():
     y2, p2, r2 = _rot_to_ypr(R)
     assert abs(p2 - pitch) < 1e-6
     assert abs(r2 - roll) < 1e-6
+
+
+# --------------------- detection helpers (for drawing evidence) ---------------------
+
+def test_detect_horizon_exposes_segments():
+    det = detect_horizon(_tilted_horizon(15.0))
+    assert "segments" in det and "roll" in det and "horizon_y" in det
+    assert len(det["segments"]) >= 1
+    assert abs(det["roll"] - 15.0) < 4.0
+    # each segment is (x1, y1, x2, y2)
+    assert all(len(s) == 4 for s in det["segments"])
+
+
+def _vertical_lines_image(xs=(200, 440), w=640, h=480):
+    img = np.full((h, w, 3), 255, dtype=np.uint8)
+    for x in xs:
+        cv2.line(img, (x, 20), (x, h - 20), (0, 0, 0), 4, cv2.LINE_AA)
+    return img
+
+
+def test_detect_vertical_lines_finds_segments():
+    segs = detect_vertical_lines(_vertical_lines_image())
+    assert len(segs) >= 1
+    # each detected segment should be closer to vertical than horizontal
+    for x1, y1, x2, y2 in segs:
+        assert abs(y2 - y1) > abs(x2 - x1)
+
+
+def test_vanishing_point_of_two_converging_lines():
+    # both lines pass through (320, 100)
+    seg1 = (320, 100, 200, 400)
+    seg2 = (320, 100, 440, 400)
+    vp = vanishing_point([seg1, seg2])
+    assert vp is not None
+    assert abs(vp[0] - 320) < 5.0
+    assert abs(vp[1] - 100) < 5.0
+
+
+def test_vanishing_point_needs_two_lines():
+    assert vanishing_point([(0, 0, 10, 10)]) is None
+    assert vanishing_point([]) is None
