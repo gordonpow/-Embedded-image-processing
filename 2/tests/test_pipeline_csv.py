@@ -76,7 +76,7 @@ def test_video_rows_carry_scene_label(tmp_path):
         assert row[scene_idx] in ("indoor", "outdoor")
 
 
-def test_single_image_marks_pose_na_but_fills_scene(tmp_path):
+def test_single_image_yaw_na_pitch_roll_numeric_and_scene_filled(tmp_path):
     img_path = str(tmp_path / "photo.jpg")
     cv2.imwrite(img_path, _textured(3))
     stats = run(_args(img_path))
@@ -84,8 +84,14 @@ def test_single_image_marks_pose_na_but_fills_scene(tmp_path):
 
     assert len(data) == 1
     row = dict(zip(header, data[0]))
+    # Yaw is unobservable from one image; roll/pitch come from horizon estimate.
     assert row["yaw_deg"] == "N/A"
-    assert row["pitch_deg"] == "N/A"
-    assert row["roll_deg"] == "N/A"
+    float(row["pitch_deg"])               # parses as a number (not "N/A")
+    float(row["roll_deg"])
     assert row["scene"] in ("indoor", "outdoor")
+    # Pose-pipeline-only fields stay N/A for a still image.
     assert row["depth_level"] == "N/A"
+    assert row["cam_motion"] == "N/A"
+    # A PNG with the XYZ gizmo is produced.
+    import os
+    assert os.path.exists(stats["png_path"])

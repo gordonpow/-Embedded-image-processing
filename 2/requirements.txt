@@ -1,3 +1,9 @@
 opencv-python>=4.8.0
 numpy>=1.24.0
 matplotlib>=3.7.0
+
+# Runtime needs ONLY the three above (cv2.dnn runs the Places365 model).
+# The two below are needed ONCE on a desktop to build the ONNX model via
+# models/export_places365_onnx.py — NOT required on the Raspberry Pi at runtime.
+# torch>=2.0
+# torchvision>=0.15

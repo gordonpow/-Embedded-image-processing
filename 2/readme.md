@@ -16,9 +16,10 @@
 - **FPS@解析度**
 
 ### Why（為什麼這樣設計）
-- 目標硬體是 **Raspberry Pi 4B（CPU-only）**，所以全程**純 OpenCV、無深度學習模型**，才能即時跑。
+- 目標硬體是 **Raspberry Pi 4B（CPU-only）**，所以姿態/動態/深度全用**純 OpenCV 幾何法**，才能即時跑。
 - 動態方向與深度幾乎**零額外成本**：姿態管線 `recoverPose` 早已算出 `R / t / 內點匹配`，過去被丟棄，現在直接重用做運動方向與三角化深度。
-- 室內/戶外用**古典 CV 啟發式**（天空藍佔比 / 植被綠 / 亮度），輕量但僅「大致正確」。
+- 室內/戶外改用 **`cv2.dnn` + Places365 ResNet18**（仍是 OpenCV，推論時不需 PyTorch）。古典啟發式在夜景/雪地/明亮室內會失準（實測 3/6），DNN 把同一組照片拉到 **6/6**。詳見下方〔室內/戶外〕專章。
+- 單張圖片的 XYZ 用**水平線傾斜估計**（Canny + HoughLinesP）算出 roll/pitch。
 
 ### How（怎麼運作）
 1. ORB 特徵 + BFMatcher + Lowe Ratio 找對應點
@@ -26,9 +27,10 @@
 3. 累積 `R_global` → YXZ Euler 分解出 yaw/pitch/roll
 4. `t` → 相機運動方向；內點位移 → 光流方向 / zoom
 5. `triangulatePoints(K[I|0], K[R|t])` → 相對稀疏深度 → 分級
-6. 每幀（場景每 10 幀）疊加 overlay + 寫 CSV
+6. 室內/戶外：`cv2.dnn` 跑 Places365（每 N 幀一次）→ 365 類機率 → 依官方 IO 表彙總成 indoor/outdoor
+7. 每幀疊加 overlay + 寫 CSV
 
-> ⚠️ **單張圖片限制**：姿態與動態方向本質需 ≥2 幀，單圖只輸出**室內/戶外**，其餘標 `N/A`。
+> ⚠️ **單張圖片限制**：yaw 需 ≥2 幀（無相對運動 → `N/A`）；roll/pitch 改由水平線估計；動態方向/深度仍需影片（`N/A`）。
 
 ---
 
@@ -72,6 +74,10 @@ flowchart LR
 ```bash
 # 1. 安裝相依套件
 pip install -r requirements.txt
+
+# 1.5（選用，建議）產生 Places365 模型 → 室內/戶外從 3/6 提升到 6/6
+#     沒有模型時會自動退回古典啟發式，仍可執行
+python models/export_places365_onnx.py
 
 # 2. 執行姿態估計（影片 / 即時攝影機 / 單張圖片）
 python src/main.py test_inputs/indoor_office.mp4
@@ -148,6 +154,11 @@ positional:
 
 校正:
   --calib PATH         camera_matrix.yaml（由 calibrate.py 產生）
+
+室內/戶外分類:
+  --scene-model PATH   Places365 ONNX（預設 models/places365_resnet18.onnx）
+  --scene-io PATH      indoor/outdoor 對照表（預設 models/io_places365.txt）
+                       兩者皆不存在時 → 自動退回古典 HSV 啟發式
 ```
 
 ---
@@ -189,6 +200,73 @@ python benchmarks/run_benchmark.py --videos test_inputs/
 | 累積 | R_global = R_global × R | 相對第 0 幀的累積旋轉 |
 | Euler | YXZ 分解 (Ry·Rx·Rz) | yaw(Y) / pitch(X) / roll(Z) |
 | 關鍵幀 | inlier ratio < 50% → 替換參考幀 | 限制漂移 |
+
+---
+
+## 室內/戶外分類：為什麼用 `cv2.dnn` + Places365（課堂報告重點）
+
+### Q1. 為什麼古典 CV 啟發式不夠？
+室內/戶外是**語意層級**的辨識，但亮度、藍天、綠色這些**低階特徵只跟「白天」場景相關**。實測你提供的 6 張照片：
+
+| 圖 | 實際 | 古典啟發式 | DNN(Places365) |
+|----|------|-----------|----------------|
+| test1 明亮客廳 | 室內 | ❌ outdoor 0.57 | ✅ indoor 0.94 |
+| test2 廚房 | 室內 | ✅ indoor | ✅ indoor 0.99 |
+| test3 海邊建築 | 戶外 | ✅ outdoor | ✅ outdoor 1.00 |
+| test4 草地藍天 | 戶外 | ✅ outdoor | ✅ outdoor 0.98 |
+| test5 夜景房子 | 戶外 | ❌ indoor 0.89 | ✅ outdoor 0.99 |
+| test6 黃昏老街 | 戶外 | ❌ indoor 0.59 | ✅ outdoor 0.96 |
+| **準確率** | | **3/6** | **6/6** |
+
+失敗模式很一致：**明亮室內被當戶外、夜景/黃昏/雪地被當室內**——因為它們缺乏「藍天」這個正向線索。這在古典 CV 下**本質難解**。
+
+### Q2. 用 ML 不就違反「用 OpenCV」了嗎？→ 沒有
+**OpenCV 內建 `cv2.dnn` 模組**，可直接在 CPU 載入並執行 ONNX 模型——**推論時完全不需要 PyTorch/TensorFlow**。
+
+```python
+net = cv2.dnn.readNetFromONNX("models/places365_resnet18.onnx")
+net.setInput(blob); logits = net.forward()        # 純 OpenCV 推論
+```
+
+所以「用 OpenCV」與「跑 CNN」並不衝突。對**嵌入式**作業而言，展示「在 Pi 4B 上用 cv2.dnn 跑 CNN 推論」反而比手刻啟發式更貼近嵌入式視覺的實務。
+
+### Q3. 為什麼選 Places365 ResNet18？
+- **Places365**：MIT 專為**場景辨識**訓練（365 類場景），官方附 `IO_places365.txt` 把每類標記為 indoor(1)/outdoor(2)。我們跑一次推論 → softmax → 依 IO 表把 365 類機率**彙總**成室內 vs 戶外（見 `scene.aggregate_io`）。
+- **ResNet18**：官方釋出權重中**最小**的一個（ONNX 約 45MB），是 Pi 4B 上**體積/準確率的最佳平衡**。
+
+### Q4. Pi 4B 跑得動嗎？
+跑得動，關鍵是**不需要每幀跑**：
+- 室內/戶外**變化很慢**，每 ~30 幀（約 1 秒）推論一次即可（`_SCENE_INTERVAL`）。
+- ResNet18 224² 在 Pi 4B CPU 約 **0.6–0.9s/次**（桌機實測 ~12ms）；因每秒才一次，**姿態主迴圈仍維持 15–25 FPS** 不受影響。
+
+### Q5. 沒有模型檔會怎樣？→ 優雅退化
+`SceneClassifier.try_load()` 找不到模型時回傳 `None`，自動退回**古典啟發式**（零依賴）。所以模型在就準、模型不在也能跑，**嵌入式部署有保險**。
+
+```
+scene.py:  有模型 → cv2.dnn 推論（準）   /   無模型 → HSV 啟發式（fallback）
+```
+
+### 模型如何產生（一次性，桌機執行）
+```bash
+python models/export_places365_onnx.py
+# 下載官方 resnet18_places365 權重 + IO 表，用 torch 轉成
+#   models/places365_resnet18.onnx  (cv2.dnn 載入用，runtime 不需 torch)
+#   models/io_places365.txt         (365 行，1=室內 2=戶外)
+```
+
+---
+
+## 單張圖片的 XYZ：水平線傾斜估計
+
+影片的 XYZ 來自**跨幀累積的相對旋轉**；單張靜態圖片沒有第二幀，所以改判讀相機相對地面的**傾斜**：
+
+| 角 | 從哪來 | 可觀測？ |
+|----|--------|---------|
+| **roll** | 主導水平線的傾斜角（Canny + HoughLinesP） | ✅ |
+| **pitch** | 水平線在畫面中的高度（高於中心→俯角為正） | ✅ |
+| **yaw** | 單圖無航向基準 | ❌ 固定 0 |
+
+得到 `(0, pitch, roll)` 後用 `ypr_to_R` 建旋轉矩陣，餵給與影片**同一個** XYZ 指示器繪製——照片越傾斜，右上角的 XYZ 軸跟著轉。實作見 `src/orient.py`。
 
 ---
 

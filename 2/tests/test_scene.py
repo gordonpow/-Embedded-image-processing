@@ -1,8 +1,8 @@
-"""RED tests for src/scene.py — indoor/outdoor classifier (classical CV)."""
+"""RED tests for src/scene.py — indoor/outdoor classifier (classical CV + DNN)."""
 import numpy as np
 import pytest
 
-from scene import classify_indoor_outdoor
+from scene import classify_indoor_outdoor, softmax, aggregate_io
 
 
 def _blue_sky_over_green(w=160, h=120):
@@ -49,3 +49,37 @@ def test_tiny_input_does_not_crash():
     label, conf = classify_indoor_outdoor(tiny)
     assert label in ("indoor", "outdoor")
     assert 0.0 <= conf <= 1.0
+
+
+# --------------------- DNN path: pure aggregation logic ---------------------
+
+def test_softmax_sums_to_one():
+    p = softmax(np.array([2.0, 1.0, 0.1, -3.0]))
+    assert abs(float(p.sum()) - 1.0) < 1e-6
+    assert np.all(p >= 0)
+
+
+def test_aggregate_io_indoor_dominant():
+    # io flags: 1=indoor, 2=outdoor (Places365 convention)
+    io = np.array([1, 1, 2, 2])
+    probs = np.array([0.4, 0.4, 0.1, 0.1])
+    label, conf = aggregate_io(probs, io)
+    assert label == "indoor"
+    assert abs(conf - 0.8) < 1e-6
+
+
+def test_aggregate_io_outdoor_dominant():
+    io = np.array([1, 1, 2, 2])
+    probs = np.array([0.1, 0.1, 0.5, 0.3])
+    label, conf = aggregate_io(probs, io)
+    assert label == "outdoor"
+    assert abs(conf - 0.8) < 1e-6
+    assert 0.0 <= conf <= 1.0
+
+
+def test_aggregate_io_would_catch_flipped_mapping():
+    # If indoor/outdoor were swapped, this all-indoor vote would read 'outdoor'.
+    io = np.array([1, 1, 1])
+    probs = np.array([0.5, 0.3, 0.2])
+    label, _ = aggregate_io(probs, io)
+    assert label == "indoor"

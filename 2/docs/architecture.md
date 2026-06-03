@@ -65,10 +65,15 @@ flowchart TD
 │   ├── main.py        CLI 入口，argparse，source_is_available()，呼叫 pipeline.run()
 │   ├── pipeline.py    來源路由（影片/webcam/單圖）、幀迴圈、CSV 寫入、串接 scene/motion/depth
 │   ├── estimator.py   ORB + findEssentialMat + recoverPose → yaw/pitch/roll、回傳 R_rel/t/內點
-│   ├── scene.py       古典 CV 室內/戶外分類（HSV 天空/植被/亮度啟發式，可單幀）
+│   ├── scene.py       室內/戶外：SceneClassifier(cv2.dnn+Places365) + 古典 HSV fallback
 │   ├── motion.py      camera_motion(t) + flow_direction(內點) → 動態方向 / zoom
 │   ├── depth.py       triangulatePoints → 相對稀疏深度 + NEAR/MID/FAR
+│   ├── orient.py      單圖水平線 → roll/pitch（Canny+HoughLinesP）+ ypr_to_R
 │   └── visualize.py   draw_pose_overlay（含 SCN/MOV/DEP）+ draw_orientation_indicator
+├── models/
+│   ├── export_places365_onnx.py  一次性：下載+轉 Places365 ResNet18 → ONNX
+│   ├── io_places365.txt          365 行 1=室內/2=戶外
+│   └── places365_resnet18.onnx   (git-ignored, 45MB) cv2.dnn 載入用
 ├── calibrate.py       棋盤格相機校正 → camera_matrix.yaml
 ├── plot_poses.py      matplotlib 三欄 PNG 曲線圖（離線）
 ├── benchmarks/
@@ -284,5 +289,13 @@ K = [[W, 0, W/2],
 
 ---
 
+### 10.4 室內/戶外升級：cv2.dnn + Places365（取代啟發式為主路徑）
+古典啟發式在夜景/雪地/明亮室內失準（實測 3/6）。改用 `SceneClassifier`：`cv2.dnn.readNetFromONNX` 載入 Places365 ResNet18 → softmax → 依官方 IO 表 `aggregate_io` 彙總 indoor/outdoor（實測 6/6）。推論時不需 PyTorch，每 N 幀跑一次，Pi 4B 可承受；無模型檔時 `try_load` 自動退回啟發式。
+
+### 10.5 單圖 XYZ：水平線傾斜（`orient.py`）
+單圖無相對旋轉 → yaw 不可觀測（=0）。以 Canny + HoughLinesP 取主導水平線 → roll（線傾角）、pitch（線高度）→ `ypr_to_R` → 與影片共用 XYZ 指示器繪製。
+
+---
+
 ## Last Updated
-2026-06-03 — 新增 `scene.py` / `motion.py` / `depth.py` 三模組；`estimator.process()` 回傳擴充為 9-tuple（+R_rel/t/內點）；`pipeline` 加入單圖分支與 webcam 整數來源；CSV 由 8 欄擴充為 15 欄；新增 `tests/`。
+2026-06-03 — 室內/戶外改用 `cv2.dnn` + Places365 ResNet18（保留 HSV fallback，準確率 3/6→6/6）；新增 `orient.py` 單圖水平線傾斜 → XYZ；單圖 overlay 移除 FPS、yaw=N/A 而 roll/pitch 由水平線估計；新增 `models/` 與 `--scene-model/--scene-io`。前次：新增 scene/motion/depth、estimator 9-tuple、單圖分支、webcam、CSV 15 欄、tests/。

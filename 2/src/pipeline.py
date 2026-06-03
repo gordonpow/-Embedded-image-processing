@@ -9,14 +9,19 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 from estimator import PoseEstimator
 from visualize import draw_pose_overlay, draw_orientation_indicator
-from scene import classify_indoor_outdoor
+from scene import classify_indoor_outdoor, SceneClassifier
 from motion import camera_motion, flow_direction
 from depth import relative_depth
+from orient import estimate_orientation_from_image, ypr_to_R
 
 _EMA_ALPHA = 0.1        # FPS smoothing — same factor as folder-1 fire detector
 _SCENE_INTERVAL = 10    # recompute indoor/outdoor every N frames (Pi-friendly)
 
 _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
+
+_MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models")
+_DEFAULT_MODEL = os.path.join(_MODELS_DIR, "places365_resnet18.onnx")
+_DEFAULT_IO = os.path.join(_MODELS_DIR, "io_places365.txt")
 
 CSV_HEADER = [
     "frame_idx", "timestamp_s", "yaw_deg", "pitch_deg", "roll_deg",
@@ -44,6 +49,13 @@ def run(args) -> dict:
 # ------------------------------------------------------------------
 # Stream (video file or webcam) path
 # ------------------------------------------------------------------
+
+def _load_scene_classifier(args):
+    """Load the Places365 DNN backend, or None (-> heuristic fallback)."""
+    model = getattr(args, "scene_model", None) or _DEFAULT_MODEL
+    io = getattr(args, "scene_io", None) or _DEFAULT_IO
+    return SceneClassifier.try_load(model, io)
+
 
 def _run_stream(args, cap_arg) -> dict:
     cap = cv2.VideoCapture(cap_arg)
@@ -81,6 +93,8 @@ def _run_stream(args, cap_arg) -> dict:
     )
     estimator.set_K(K)
 
+    classifier = _load_scene_classifier(args)
+
     csv_file = open(out_csv, "w", newline="", encoding="utf-8")
     csv_writer = csv.writer(csv_file)
     csv_writer.writerow(CSV_HEADER)
@@ -110,7 +124,7 @@ def _run_stream(args, cap_arg) -> dict:
 
         # --- Scene (indoor/outdoor): recompute every N frames, reuse otherwise ---
         if frame_idx % _SCENE_INTERVAL == 0:
-            scene_label, scene_conf = classify_indoor_outdoor(frame)
+            scene_label, scene_conf = classify_indoor_outdoor(frame, classifier)
 
         # --- Motion direction: camera translation + apparent picture flow ---
         cam_dir = camera_motion(t_vec)
@@ -177,12 +191,15 @@ def _run_image(args, path) -> dict:
 
     print(
         f"[init] source={args.source}  resolution={tgt_w}x{tgt_h}  "
-        f"mode=single-image (pose/motion/depth need >=2 frames -> N/A)"
+        f"mode=single-image (yaw needs >=2 frames -> N/A; roll/pitch from horizon)"
     )
 
-    t0 = time.perf_counter()
-    scene_label, scene_conf = classify_indoor_outdoor(img)
-    proc_fps = 1.0 / max(1e-6, time.perf_counter() - t0)
+    classifier = _load_scene_classifier(args)
+    scene_label, scene_conf = classify_indoor_outdoor(img, classifier)
+
+    # Single-image orientation: roll/pitch from the horizon (yaw unobservable).
+    roll, pitch = estimate_orientation_from_image(img)
+    R_img = ypr_to_R(0.0, pitch, roll)
 
     out_mp4, out_csv = _output_paths(args)
     out_png = os.path.splitext(out_csv)[0] + ".png"
@@ -191,24 +208,27 @@ def _run_image(args, path) -> dict:
         w = csv.writer(csv_file)
         w.writerow(CSV_HEADER)
         w.writerow([
-            0, "0.000", "N/A", "N/A", "N/A",
-            f"{proc_fps:.1f}", "N/A", "N/A",
+            0, "0.000", "N/A", f"{pitch:.2f}", f"{roll:.2f}",
+            "N/A", "N/A", "N/A",
             scene_label, f"{scene_conf:.2f}", "N/A", "N/A", "N/A",
             "N/A", "N/A",
         ])
 
-    # Annotated still: scene label only.
+    # Annotated still: slim overlay (no FPS / stats) + XYZ gizmo from horizon tilt.
     draw_pose_overlay(
-        img, 0.0, 0.0, 0.0, proc_fps, 0, 0, tgt_w, tgt_h,
+        img, 0.0, pitch, roll, 0.0, 0, 0, tgt_w, tgt_h,
         scene=scene_label, scene_conf=scene_conf,
-        cam_motion="N/A", flow="N/A", zoom_in=False, depth_level="N/A",
-        pose_na=True,
+        yaw_na=True, show_fps=False, show_stats=False,
     )
+    draw_orientation_indicator(img, R_img)
     cv2.imwrite(out_png, img)
-    print(f"[result] scene={scene_label} ({scene_conf:.2f})  png={out_png}  csv={out_csv}")
+    print(
+        f"[result] scene={scene_label} ({scene_conf:.2f})  "
+        f"roll={roll:+.1f} pitch={pitch:+.1f}  png={out_png}  csv={out_csv}"
+    )
 
     return {
-        "avg_fps": proc_fps, "w": tgt_w, "h": tgt_h,
+        "avg_fps": 0.0, "w": tgt_w, "h": tgt_h,
         "total_frames": 1, "csv_path": out_csv, "mp4_path": None,
         "png_path": out_png, "scene": scene_label,
     }

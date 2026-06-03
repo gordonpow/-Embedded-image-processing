@@ -18,32 +18,33 @@ def draw_pose_overlay(
     flow: str | None = None,
     zoom_in: bool = False,
     depth_level: str | None = None,
-    pose_na: bool = False,
+    yaw_na: bool = False,
+    show_fps: bool = True,
+    show_stats: bool = True,
 ) -> None:
     """
-    Draw yaw/pitch/roll + FPS + inlier stats in the top-left corner.
+    Draw yaw/pitch/roll (+ optional FPS / inlier stats) in the top-left corner.
 
-    When scene/motion/depth values are supplied, three extra lines are added:
+    When scene/motion/depth values are supplied, extra lines are added:
         SCN <indoor/outdoor> <conf>
         MOV <cam_dir> / <flow_dir>[ ZOOM]
         DEP <near/mid/far>
-    ``pose_na=True`` renders yaw/pitch/roll as N/A (single-image mode).
+
+    Single-image mode uses ``yaw_na=True`` (yaw unobservable; pitch/roll come
+    from the horizon estimate) and ``show_fps=show_stats=False`` for a slim
+    overlay.
     """
     cyan = (255, 220, 120)
-    if pose_na:
-        pose_lines = [
-            ("YAW    N/A", cyan), ("PIT    N/A", cyan), ("ROL    N/A", cyan),
-        ]
-    else:
-        pose_lines = [
-            (f"YAW  {yaw:+7.1f} deg", (0, 255, 0)),
-            (f"PIT  {pitch:+7.1f} deg", (0, 255, 0)),
-            (f"ROL  {roll:+7.1f} deg", (0, 255, 0)),
-        ]
-    lines = pose_lines + [
-        (f"FPS  {fps:5.1f}  {w}x{h}", (200, 200, 200)),
-        (f"PTS  {npts:4d}  INL {inliers:4d}", (200, 200, 200)),
+    yaw_line = ("YAW    N/A", cyan) if yaw_na else (f"YAW  {yaw:+7.1f} deg", (0, 255, 0))
+    lines = [
+        yaw_line,
+        (f"PIT  {pitch:+7.1f} deg", (0, 255, 0)),
+        (f"ROL  {roll:+7.1f} deg", (0, 255, 0)),
     ]
+    if show_fps:
+        lines.append((f"FPS  {fps:5.1f}  {w}x{h}", (200, 200, 200)))
+    if show_stats:
+        lines.append((f"PTS  {npts:4d}  INL {inliers:4d}", (200, 200, 200)))
 
     if scene is not None:
         conf_txt = f" {scene_conf:.2f}" if scene_conf is not None else ""
