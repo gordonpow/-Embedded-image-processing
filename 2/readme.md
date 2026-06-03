@@ -163,6 +163,28 @@ python benchmarks/validate_scene.py   # 室內/戶外 → 準確率 + PASS/FAIL
 
 > 此驗收框架**第一次跑就抓到一個既有 bug**：姿態旋轉過度累積（合成 GT 上 MAE 飆到 100°），修正為 keyframe 相對累積後降到 13°。詳見 [validation.md](docs/validation.md)。
 
+### 真實世界對比：TUM RGB-D（我們的輸出 vs 動捕真值）
+
+在 [TUM RGB-D](https://cvg.cit.tum.de/data/datasets/rgbd-dataset) 公開測試序列上，用**同一批測試影格**跑我們的系統，和他們的**動作捕捉真值**逐幀對比（綠＝真值、藍＝我們的估計）：
+
+![TUM freiburg1_xyz 對比動畫](docs/tum_xyz.gif)
+
+| 序列 | 速度/難度 | yaw | pitch | roll | 幾何旋轉 MAE |
+|------|-----------|-----|-------|------|-------------|
+| `freiburg1_xyz` | 中速（translation 為主） | 8.0° | 7.1° | **2.0°** | **11.9°** ✅ 全程貼合 |
+| `freiburg1_desk` | 快速＋動態模糊（公認最難） | 29.7° | 21.5° | 46.0° | 55.8°（前 7 秒準、後段漂移） |
+
+對照曲線與逐幀並排：[`tum_xyz_compare.png`](docs/tum_xyz_compare.png)・[`tum_xyz_frames.png`](docs/tum_xyz_frames.png)・[`tum_desk_compare.png`](docs/tum_desk_compare.png)・[`tum_compare_frames.png`](docs/tum_compare_frames.png)
+
+```bash
+# 下載並解壓 TUM 序列到 test_inputs/tum/ 後：
+python benchmarks/validate_tum.py    --seq test_inputs/tum/rgbd_dataset_freiburg1_xyz --plot docs/tum_xyz_compare.png
+python benchmarks/tum_make_gif.py    --seq test_inputs/tum/rgbd_dataset_freiburg1_xyz --out docs/tum_xyz.gif
+python benchmarks/tum_frame_compare.py --seq test_inputs/tum/rgbd_dataset_freiburg1_xyz --out docs/tum_xyz_frames.png
+```
+
+**結論**：中等速度的真實序列我們**全程貼合真值**（roll 僅 2° 誤差）；只有在最難的快速＋模糊序列才會長期漂移——這是單目 VO（無 SLAM 後端）的本質界線。
+
 ---
 
 ## 7. CLI 參數
