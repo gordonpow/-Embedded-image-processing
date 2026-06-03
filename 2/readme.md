@@ -169,6 +169,21 @@ python benchmarks/validate_scene.py   # 室內/戶外 → 準確率 + PASS/FAIL
 
 *圖說：6 張測試照片的標注輸出。左上 HUD 顯示 `Yaw/Pitch/Roll`（單圖由水平線＋消失點估計，無法觀測時標 N/A）與 `場景：室內/戶外（信心值）`；畫面疊上偵測到的**水平線**（黃）、**特徵點＋梯度方向場**（綠）、**垂直線/消失點**（洋紅），右上為 **XYZ 姿態指示器**。分類結果 test1/2＝室內、test3–6＝戶外，與標準答案 **6/6 相符**（對照古典啟發式僅 3/6）。*
 
+### 圖片標準答案對照：Places365 驗證集（準確率 95%）
+
+和 TUM（影片/姿態）平行的**圖片版**標準答案：[Places365](https://github.com/CSAILVision/places365) 驗證集每張圖都有官方室內/戶外標籤。用同一個 DNN 跑，比對「他們的答案 vs 我們」：
+
+![Places365 驗證集 GT vs 我們](docs/places365_demo.png)
+
+*圖說：12 張 Places365 驗證圖（上兩排官方標籤＝室內、下兩排＝戶外）。每格 `GT:` 綠字＝Places365 **官方標籤**（標準答案）、`OUR:` ＝**我們的判斷**＋信心值（綠＝答對、紅＝答錯）。整體 60 張 **準確率 95%（57/60）**。*
+
+```bash
+# 下載 Places365 驗證子集與標籤後（test_inputs/places365_val/）：
+python benchmarks/validate_places365.py --dir test_inputs/places365_val --out docs/places365_demo.png
+```
+
+> 對照 TUM 是**影片型**標準答案，Places365 是**圖片型**。Places365 亦為本模型的訓練分佈（in-distribution），故準確率高屬預期；此區塊重點在示範「標準答案 vs 我們」的比對流程與室內/戶外彙總邏輯（`scene.aggregate_io`）正確。
+
 > 此驗收框架**第一次跑就抓到一個既有 bug**：姿態旋轉過度累積（合成 GT 上 MAE 飆到 100°），修正為 keyframe 相對累積後降到 13°。詳見 [validation.md](docs/validation.md)。
 
 ### 真實世界對比：TUM RGB-D（我們的輸出 vs 動捕真值）

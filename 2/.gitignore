@@ -16,5 +16,6 @@ models/*.pth.tar
 # (the small ground-truth CSVs are kept for reproducible acceptance tests)
 test_inputs/*.mp4
 
-# Downloaded public datasets (TUM RGB-D etc.) — large, fetched on demand
+# Downloaded public datasets (TUM RGB-D, Places365 etc.) — fetched on demand
 test_inputs/tum/
+test_inputs/places365_val/
