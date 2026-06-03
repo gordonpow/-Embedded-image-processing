@@ -173,9 +173,13 @@ python benchmarks/validate_scene.py   # 室內/戶外 → 準確率 + PASS/FAIL
 
 ![TUM freiburg1_xyz 對比動畫](docs/tum_xyz.gif)
 
+*圖說：逐幀播放 `freiburg1_xyz`。每格綠字 `TUM TRUTH` 是該幀相機的**真實姿態**、藍字 `OUR EST.` 是**我們的估計**，`err` 為當下旋轉誤差。三軸數值幾乎同步變化——中速序列全程貼合。*
+
 **② 最難序列 `freiburg1_desk`（快速＋動態模糊）— 前段準、後段漂移：**
 
 ![TUM freiburg1_desk 對比動畫](docs/tum_desk.gif)
+
+*圖說：逐幀播放 `freiburg1_desk`（公認最難）。前段藍≈綠，約 200 幀後藍字逐漸偏離綠字、`err` 攀升，呈現單目視覺里程計的**長期漂移**。*
 
 | 序列 | 速度/難度 | yaw | pitch | roll | 幾何旋轉 MAE |
 |------|-----------|-----|-------|------|-------------|
@@ -187,11 +191,17 @@ python benchmarks/validate_scene.py   # 室內/戶外 → 準確率 + PASS/FAIL
 `freiburg1_xyz`（中速，全程貼合）
 ![xyz 對照曲線](docs/tum_xyz_compare.png)
 
+*圖說：橫軸＝配對幀序、縱軸＝角度（度），由上而下為 yaw／pitch／roll 三軸。綠實線（TUM 真值）與紅虛線（我們）幾乎重疊，尤其 roll 僅 2° 誤差——代表全程都跟得住真值。*
+
 `freiburg1_desk`（最難，前段準、後段漂移）
 ![desk 對照曲線](docs/tum_desk_compare.png)
 
+*圖說：同樣三軸對幀序。前 ~200 幀紅綠貼合，之後紅線（我們）發散偏離綠線（真值），對應幾何旋轉誤差由數度增至約 110°——這就是快速＋動態模糊序列上的漂移。*
+
 **`freiburg1_desk` 逐幀並排**（真實測試影像 + 🟢TUM 真值 vs 🔵我們的估計）：
 ![desk 逐幀並排](docs/tum_compare_frames.png)
+
+*圖說：四個代表幀（frame 40／150／200／400）的單格快照。黑底上排綠字＝TUM 真值、下排藍字＝我們估計的 Y/P/R，可逐格核對數字差距；可見前段接近、frame 400 已明顯偏離。*
 
 > 另有 `freiburg1_xyz` 逐幀並排：[`docs/tum_xyz_frames.png`](docs/tum_xyz_frames.png)
 
