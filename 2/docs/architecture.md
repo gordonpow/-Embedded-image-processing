@@ -6,8 +6,8 @@
 
 | 項目 | 規格 |
 |------|------|
-| **輸入** | 影片檔 (mp4/avi/mov)、靜態圖片 |
-| **輸出** | yaw/pitch/roll 度數、CSV、標注 mp4、曲線 PNG |
+| **輸入** | 影片檔 (mp4/avi/mov)、即時攝影機（整數索引）、靜態圖片 |
+| **輸出** | yaw/pitch/roll 度數、室內/戶外、動態方向、相對深度、CSV、標注 mp4/PNG、曲線 PNG |
 | **演算法** | ORB 特徵 + 5-point Essential Matrix (RANSAC) |
 | **相機內參** | 近似法 `fx = fy = W`（無需校正）或 `camera_matrix.yaml` |
 | **目標硬體** | Raspberry Pi 4B（ARM Cortex-A72，4 核，CPU-only） |
@@ -62,14 +62,30 @@ flowchart TD
 ```
 2/
 ├── src/
-│   ├── main.py        CLI 入口，argparse，呼叫 pipeline.run()
-│   ├── pipeline.py    幀迴圈、EMA FPS、VideoWriter、CSV 寫入
-│   ├── estimator.py   ORB + findEssentialMat + 累積 R → yaw/pitch/roll
-│   └── visualize.py   draw_pose_overlay + draw_orientation_indicator
+│   ├── main.py        CLI 入口，argparse，source_is_available()，呼叫 pipeline.run()
+│   ├── pipeline.py    來源路由（影片/webcam/單圖）、幀迴圈、CSV 寫入、串接 scene/motion/depth
+│   ├── estimator.py   ORB + findEssentialMat + recoverPose → yaw/pitch/roll、回傳 R_rel/t/內點
+│   ├── scene.py       室內/戶外：SceneClassifier(cv2.dnn+Places365) + 古典 HSV fallback
+│   ├── motion.py      camera_motion(t) + flow_direction(內點) → 動態方向 / zoom
+│   ├── depth.py       triangulatePoints → 相對稀疏深度 + NEAR/MID/FAR
+│   ├── orient.py      單圖 roll/pitch + 水平線/垂直線/消失點偵測 + ypr_to_R
+│   ├── draw_cv.py     中文 HUD(PIL，無字型退回英文) + CV證據繪製
+│   │                  （光流箭頭 / 水平線 / 特徵+梯度場 / 消失點）
+│   └── visualize.py   draw_pose_overlay（中文化）+ draw_orientation_indicator
+├── benchmarks/
+│   ├── metrics.py        角度誤差 / 分類準確率（驗收度量）
+│   ├── validate_pose.py  姿態 vs 合成 GT → MAE/RMSE + PASS/FAIL
+│   ├── validate_scene.py 室內/戶外 vs 標註 → 準確率 + PASS/FAIL
+│   └── labels_demo.csv   6 張示範圖的室內/戶外標準答案
+├── models/
+│   ├── export_places365_onnx.py  一次性：下載+轉 Places365 ResNet18 → ONNX
+│   ├── io_places365.txt          365 行 1=室內/2=戶外
+│   └── places365_resnet18.onnx   (git-ignored, 45MB) cv2.dnn 載入用
 ├── calibrate.py       棋盤格相機校正 → camera_matrix.yaml
 ├── plot_poses.py      matplotlib 三欄 PNG 曲線圖（離線）
 ├── benchmarks/
 │   └── run_benchmark.py  解析度 × 場景掃描 → results.md
+├── tests/             pytest 單元測試（scene/motion/depth/estimator/pipeline/main）
 └── docs/
     └── architecture.md   本文件
 ```
@@ -78,14 +94,48 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    VIDEO[影片檔] --> PIPE[pipeline.py]
+    SRC[影片 / webcam / 單圖] --> PIPE[pipeline.py\n來源路由]
     YAML[camera_matrix.yaml\n可選] --> PIPE
-    PIPE --> EST[estimator.py\nR_global]
+    PIPE --> EST[estimator.py\nR_rel, t, 內點, R_global]
+    PIPE --> SCN[scene.py\n室內/戶外]
+    EST --> MOT[motion.py\n相機+光流方向]
+    EST --> DEP[depth.py\n相對深度]
     EST --> VIZ[visualize.py\n標注幀]
-    VIZ --> MP4[標注 mp4]
-    EST --> CSV[pose CSV]
+    SCN --> VIZ
+    MOT --> VIZ
+    DEP --> VIZ
+    VIZ --> MP4[標注 mp4 / PNG]
+    EST --> CSV[pose CSV\n15 欄]
+    SCN --> CSV
+    MOT --> CSV
+    DEP --> CSV
     CSV --> PLOT[plot_poses.py]
     PLOT --> PNG[曲線 PNG]
+```
+
+### 資料契約 — CSV 列（JSON Schema）
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "frame_idx":   { "type": "integer" },
+    "timestamp_s": { "type": "number" },
+    "yaw_deg":     { "type": ["number", "string"], "description": "度；單圖為 'N/A'" },
+    "pitch_deg":   { "type": ["number", "string"] },
+    "roll_deg":    { "type": ["number", "string"] },
+    "fps":         { "type": "number" },
+    "inliers":     { "type": ["integer", "string"], "description": "-1=參考幀；單圖 'N/A'" },
+    "nfeatures":   { "type": ["integer", "string"] },
+    "scene":       { "type": "string", "enum": ["indoor", "outdoor"] },
+    "scene_conf":  { "type": "number", "minimum": 0.5, "maximum": 1.0 },
+    "cam_motion":  { "type": "string", "enum": ["FWD","BACK","LEFT","RIGHT","UP","DOWN","STILL","N/A"] },
+    "flow_motion": { "type": "string", "enum": ["PAN-L","PAN-R","TILT-U","TILT-D","STILL","N/A"] },
+    "zoom_in":     { "type": ["integer", "string"], "enum": [0, 1, "N/A"] },
+    "rel_depth":   { "type": ["number", "string"], "description": "baseline 單位（相對，非絕對）；'N/A' 無解" },
+    "depth_level": { "type": "string", "enum": ["NEAR", "MID", "FAR", "N/A"] }
+  }
+}
 ```
 
 ---
@@ -222,3 +272,40 @@ K = [[W, 0, W/2],
 | 尺度模糊 | 單目無法量距離，需立體相機或已知尺寸物體 |
 | 無限漂移 | 需回環偵測（Loop Closure）→ 完整 SLAM 管線 |
 | 計算量龐大 | ORB-SLAM3 等完整 SLAM 系統在 Pi 4B 僅 5–10 FPS |
+
+---
+
+## 10. 場景 / 動態方向 / 深度（新增模組）
+
+### 10.1 室內 / 戶外（`scene.py`）
+古典 CV 啟發式（無 ML），HSV 空間計算三線索並加權：
+- `sky_frac`：上 1/3 區域中「高 V + (低 S 或藍色 hue 90–140)」像素佔比
+- `veg_frac`：全幀綠色 hue(35–85) 飽和像素佔比
+- `bright_norm`：整體亮度正規化
+分數 `0.4·sky + 0.35·veg + 0.25·bright ≥ 0.35` → outdoor，否則 indoor。confidence ∈ [0.5,1.0]。
+> 精度為「大致正確」；邊界場景（室內大窗）可能誤判。每 10 幀重算一次以省 Pi 成本。
+
+### 10.2 動態方向（`motion.py`）
+- `camera_motion(t)`：`recoverPose` 的單位 `t`（相機系 X右/Y下/Z前）取主導分量 → FWD/BACK/LEFT/RIGHT/UP/DOWN/STILL
+- `flow_direction(內點)`：內點中位位移 → PAN-L/PAN-R/TILT-U/TILT-D（慣例：畫面右移=相機左轉）；相對質心的徑向發散 → `zoom_in`
+
+### 10.3 相對深度（`depth.py`）
+`P1=K[I|0]`、`P2=K[R_rel|t]` → `cv2.triangulatePoints` → 取正 Z 中位數。  
+⚠️ 單目尺度模糊：`t` 為單位向量，深度以 **baseline 單位** 表示（相對，非公尺）。固定門檻分 NEAR(<5)/MID/FAR(>15)。  
+重用姿態管線既有的 `R_rel, t, 內點`，額外成本僅一次三角化，適合 Pi 4B。
+
+---
+
+### 10.4 室內/戶外升級：cv2.dnn + Places365（取代啟發式為主路徑）
+古典啟發式在夜景/雪地/明亮室內失準（實測 3/6）。改用 `SceneClassifier`：`cv2.dnn.readNetFromONNX` 載入 Places365 ResNet18 → softmax → 依官方 IO 表 `aggregate_io` 彙總 indoor/outdoor（實測 6/6）。推論時不需 PyTorch，每 N 幀跑一次，Pi 4B 可承受；無模型檔時 `try_load` 自動退回啟發式。
+
+### 10.5 單圖 XYZ：水平線傾斜（`orient.py`）
+單圖無相對旋轉 → yaw 不可觀測（=0）。以 Canny + HoughLinesP 取主導水平線 → roll（線傾角）、pitch（線高度）→ `ypr_to_R` → 與影片共用 XYZ 指示器繪製。
+
+---
+
+## Last Updated
+2026-06-03（d）— 單圖姿態升級：新增 `orient.image_pose`，用**水平消失點**取 yaw（結構化場景可觀測，否則 N/A），補上單圖原本缺的 yaw（參考經典消失點姿態技術，以自有 `vanishing_point()` 實作）。
+2026-06-03（c）— **修正 estimator 旋轉過度累積 bug**：`R_global=R_global@R` 每幀乘且參考幀持續多幀 → 過度累積（合成 GT 上 MAE 60–100°）；改 keyframe 相對累積 `R_base@R`，MAE→13°。新增驗收框架：`benchmarks/metrics|validate_pose|validate_scene`、`gen_synthetic3d.py`（3D 視差 + 精確 GT）、`docs/validation.md`。新增 `draw_cv.py`：中文 HUD（PIL）+ CV 證據繪製（影片光流箭頭 / 單圖水平線+特徵梯度場+消失點）。
+前次（b）— 室內/戶外改 `cv2.dnn`+Places365（3/6→6/6，HSV fallback）；`orient.py` 單圖水平線→XYZ。
+前次（a）— 新增 scene/motion/depth、estimator 9-tuple、單圖分支、webcam、CSV 15 欄、tests/。

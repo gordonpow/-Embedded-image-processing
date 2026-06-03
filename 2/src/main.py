@@ -56,6 +56,16 @@ def _parse_args() -> argparse.Namespace:
         help="camera_matrix.yaml produced by calibrate.py",
     )
 
+    # --- Scene classifier (Places365 via cv2.dnn; heuristic fallback if absent) ---
+    p.add_argument(
+        "--scene-model", default=None,
+        help="Places365 ONNX model (default: models/places365_resnet18.onnx)",
+    )
+    p.add_argument(
+        "--scene-io", default=None,
+        help="indoor/outdoor map (default: models/io_places365.txt)",
+    )
+
     # --- Display / write flags ---
     p.add_argument("--no-show",  action="store_true", help="headless mode — no display window")
     p.add_argument("--no-video", action="store_true", help="skip writing annotated output mp4")
@@ -63,10 +73,15 @@ def _parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def source_is_available(source) -> bool:
+    """True for a webcam index (e.g. "0") or an existing file path."""
+    return str(source).isdigit() or os.path.exists(source)
+
+
 if __name__ == "__main__":
     args = _parse_args()
 
-    if not os.path.exists(args.source):
+    if not source_is_available(args.source):
         sys.exit(f"[error] source not found: {args.source}")
 
     stats = run(args)
