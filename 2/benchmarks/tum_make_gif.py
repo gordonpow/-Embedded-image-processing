@@ -62,12 +62,12 @@ def main():
         err = geodesic_deg(pr, g0.T @ gR[j])
 
         cv2.rectangle(img, (0, 0), (img.shape[1], 74), (0, 0, 0), -1)
-        cv2.putText(img, f"TUM freiburg1  frame {i}  err {err:3.0f} deg", (8, 22),
-                    0, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
-        cv2.putText(img, f"GT   Y{gy[0]:+5.0f} P{gy[1]:+5.0f} R{gy[2]:+5.0f}", (8, 46),
-                    0, 0.6, (80, 255, 80), 2, cv2.LINE_AA)
-        cv2.putText(img, f"OURS Y{py[0]:+5.0f} P{py[1]:+5.0f} R{py[2]:+5.0f}", (8, 68),
-                    0, 0.6, (80, 130, 255), 2, cv2.LINE_AA)
+        cv2.putText(img, f"TUM {os.path.basename(args.seq).split('_')[-1]}  frame {i}  err {err:3.0f} deg",
+                    (8, 22), 0, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+        cv2.putText(img, f"TUM TRUTH Y{gy[0]:+5.0f} P{gy[1]:+5.0f} R{gy[2]:+5.0f}", (8, 46),
+                    0, 0.55, (80, 255, 80), 2, cv2.LINE_AA)
+        cv2.putText(img, f"OUR EST.  Y{py[0]:+5.0f} P{py[1]:+5.0f} R{py[2]:+5.0f}", (8, 68),
+                    0, 0.55, (80, 130, 255), 2, cv2.LINE_AA)
 
         hgt = int(img.shape[0] * args.size / img.shape[1])
         small = cv2.resize(img, (args.size, hgt))

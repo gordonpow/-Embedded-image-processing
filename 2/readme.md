@@ -165,9 +165,17 @@ python benchmarks/validate_scene.py   # 室內/戶外 → 準確率 + PASS/FAIL
 
 ### 真實世界對比：TUM RGB-D（我們的輸出 vs 動捕真值）
 
-在 [TUM RGB-D](https://cvg.cit.tum.de/data/datasets/rgbd-dataset) 公開測試序列上，用**同一批測試影格**跑我們的系統，和他們的**動作捕捉真值**逐幀對比（綠＝真值、藍＝我們的估計）：
+在 [TUM RGB-D](https://cvg.cit.tum.de/data/datasets/rgbd-dataset) 公開測試序列上，用**同一批測試影格**跑我們的系統，和他們的**動作捕捉真值**逐幀對比。
+
+> **圖例**：🟢 綠字 `TUM TRUTH` = TUM 動捕**真值**（他們的標準答案）　🔵 藍字 `OUR EST.` = **我們**系統的估計。
+
+**① 中速序列 `freiburg1_xyz` — 全程貼合真值：**
 
 ![TUM freiburg1_xyz 對比動畫](docs/tum_xyz.gif)
+
+**② 最難序列 `freiburg1_desk`（快速＋動態模糊）— 前段準、後段漂移：**
+
+![TUM freiburg1_desk 對比動畫](docs/tum_desk.gif)
 
 | 序列 | 速度/難度 | yaw | pitch | roll | 幾何旋轉 MAE |
 |------|-----------|-----|-------|------|-------------|

@@ -58,10 +58,10 @@ def main():
         im = imgs[fi].copy()
         cv2.rectangle(im, (0, 0), (im.shape[1], 74), (0, 0, 0), -1)
         cv2.putText(im, f"frame {fi}", (8, 22), 0, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
-        cv2.putText(im, f"GT   Y{gy[0]:+5.0f} P{gy[1]:+5.0f} R{gy[2]:+5.0f}",
-                    (8, 46), 0, 0.6, (80, 255, 80), 2, cv2.LINE_AA)
-        cv2.putText(im, f"OURS Y{py[0]:+5.0f} P{py[1]:+5.0f} R{py[2]:+5.0f}",
-                    (8, 68), 0, 0.6, (80, 130, 255), 2, cv2.LINE_AA)
+        cv2.putText(im, f"TUM TRUTH Y{gy[0]:+5.0f} P{gy[1]:+5.0f} R{gy[2]:+5.0f}",
+                    (8, 46), 0, 0.58, (80, 255, 80), 2, cv2.LINE_AA)
+        cv2.putText(im, f"OUR EST.  Y{py[0]:+5.0f} P{py[1]:+5.0f} R{py[2]:+5.0f}",
+                    (8, 68), 0, 0.58, (80, 130, 255), 2, cv2.LINE_AA)
         panels.append(cv2.resize(im, (480, 360)))
 
     half = (len(panels) + 1) // 2
