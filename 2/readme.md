@@ -182,7 +182,18 @@ python benchmarks/validate_scene.py   # 室內/戶外 → 準確率 + PASS/FAIL
 | `freiburg1_xyz` | 中速（translation 為主） | 8.0° | 7.1° | **2.0°** | **11.9°** ✅ 全程貼合 |
 | `freiburg1_desk` | 快速＋動態模糊（公認最難） | 29.7° | 21.5° | 46.0° | 55.8°（前 7 秒準、後段漂移） |
 
-對照曲線與逐幀並排：[`tum_xyz_compare.png`](docs/tum_xyz_compare.png)・[`tum_xyz_frames.png`](docs/tum_xyz_frames.png)・[`tum_desk_compare.png`](docs/tum_desk_compare.png)・[`tum_compare_frames.png`](docs/tum_compare_frames.png)
+**三軸對照曲線**（綠實線＝TUM 真值、紅虛線＝我們的估計）：
+
+`freiburg1_xyz`（中速，全程貼合）
+![xyz 對照曲線](docs/tum_xyz_compare.png)
+
+`freiburg1_desk`（最難，前段準、後段漂移）
+![desk 對照曲線](docs/tum_desk_compare.png)
+
+**`freiburg1_desk` 逐幀並排**（真實測試影像 + 🟢TUM 真值 vs 🔵我們的估計）：
+![desk 逐幀並排](docs/tum_compare_frames.png)
+
+> 另有 `freiburg1_xyz` 逐幀並排：[`docs/tum_xyz_frames.png`](docs/tum_xyz_frames.png)
 
 ```bash
 # 下載並解壓 TUM 序列到 test_inputs/tum/ 後：
