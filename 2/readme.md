@@ -161,6 +161,14 @@ python benchmarks/validate_pose.py    # 姿態 → 每軸 MAE/RMSE + PASS/FAIL
 python benchmarks/validate_scene.py   # 室內/戶外 → 準確率 + PASS/FAIL
 ```
 
+### 單張圖片實測（6 張測試照片，室內/戶外 6/6）
+
+同一支管線處理**單張照片**，疊上偵測到的 CV 證據與場景判斷：
+
+![6 張測試照片標注輸出](docs/scene_demo.png)
+
+*圖說：6 張測試照片的標注輸出。左上 HUD 顯示 `Yaw/Pitch/Roll`（單圖由水平線＋消失點估計，無法觀測時標 N/A）與 `場景：室內/戶外（信心值）`；畫面疊上偵測到的**水平線**（黃）、**特徵點＋梯度方向場**（綠）、**垂直線/消失點**（洋紅），右上為 **XYZ 姿態指示器**。分類結果 test1/2＝室內、test3–6＝戶外，與標準答案 **6/6 相符**（對照古典啟發式僅 3/6）。*
+
 > 此驗收框架**第一次跑就抓到一個既有 bug**：姿態旋轉過度累積（合成 GT 上 MAE 飆到 100°），修正為 keyframe 相對累積後降到 13°。詳見 [validation.md](docs/validation.md)。
 
 ### 真實世界對比：TUM RGB-D（我們的輸出 vs 動捕真值）
