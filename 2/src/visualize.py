@@ -40,30 +40,31 @@ def draw_pose_overlay(
     green = (0, 255, 0)
     grey = (200, 200, 200)
 
-    # Each entry: (中文, English-fallback, colour)
+    # Each entry: (中文, English-fallback, colour).
+    # Label and value are separated by a colon for readability ("場景：戶外").
     if yaw_na:
-        lines = [("偏航  無", "YAW  N/A", cyan)]
+        lines = [("偏航：無", "YAW: N/A", cyan)]
     else:
-        lines = [(f"偏航 {yaw:+6.1f}°", f"YAW {yaw:+6.1f}", green)]
+        lines = [(f"偏航：{yaw:+6.1f}°", f"YAW: {yaw:+6.1f}", green)]
     lines += [
-        (f"俯仰 {pitch:+6.1f}°", f"PIT {pitch:+6.1f}", green),
-        (f"側傾 {roll:+6.1f}°", f"ROL {roll:+6.1f}", green),
+        (f"俯仰：{pitch:+6.1f}°", f"PIT: {pitch:+6.1f}", green),
+        (f"側傾：{roll:+6.1f}°", f"ROL: {roll:+6.1f}", green),
     ]
     if show_fps:
-        lines.append((f"幀率 {fps:.1f}  {w}x{h}", f"FPS {fps:.1f} {w}x{h}", grey))
+        lines.append((f"幀率：{fps:.1f}  {w}x{h}", f"FPS: {fps:.1f} {w}x{h}", grey))
     if show_stats:
-        lines.append((f"特徵 {npts}  內點 {inliers}", f"PTS {npts} INL {inliers}", grey))
+        lines.append((f"特徵：{npts}　內點：{inliers}", f"PTS: {npts}  INL: {inliers}", grey))
     if scene is not None:
-        conf = f" {scene_conf:.2f}" if scene_conf is not None else ""
-        lines.append((f"場景 {tr_value(scene)}{conf}", f"SCN {scene}{conf}", cyan))
+        conf = f"（{scene_conf:.2f}）" if scene_conf is not None else ""
+        lines.append((f"場景：{tr_value(scene)}{conf}", f"SCN: {scene}{conf}", cyan))
     if cam_motion is not None or flow is not None:
-        zoom_zh = " 推近" if zoom_in else ""
+        zoom_zh = "　推近" if zoom_in else ""
         zoom_en = " ZOOM" if zoom_in else ""
         lines.append((
-            f"運動 {tr_value(cam_motion or 'N/A')} / {tr_value(flow or 'N/A')}{zoom_zh}",
-            f"MOV {cam_motion or '-'} / {flow or '-'}{zoom_en}", cyan))
+            f"運動：{tr_value(cam_motion or 'N/A')} → {tr_value(flow or 'N/A')}{zoom_zh}",
+            f"MOV: {cam_motion or '-'} -> {flow or '-'}{zoom_en}", cyan))
     if depth_level is not None:
-        lines.append((f"深度 {tr_value(depth_level)}", f"DEP {depth_level}", cyan))
+        lines.append((f"深度：{tr_value(depth_level)}", f"DEP: {depth_level}", cyan))
 
     render_text_lines(frame, lines, x=10, y0=20, dy=30, size=22)
 
