@@ -13,7 +13,7 @@ from scene import classify_indoor_outdoor, SceneClassifier
 from motion import camera_motion, flow_direction
 from depth import relative_depth
 from orient import (
-    ypr_to_R, detect_horizon, detect_vertical_lines, vanishing_point,
+    ypr_to_R, detect_horizon, detect_vertical_lines, vanishing_point, image_pose,
 )
 from draw_cv import (
     draw_flow_arrows, draw_horizon, draw_feature_gradient, draw_vertical_vp,
@@ -205,11 +205,14 @@ def _run_image(args, path) -> dict:
     classifier = _load_scene_classifier(args)
     scene_label, scene_conf = classify_indoor_outdoor(img, classifier)
 
-    # Single-image orientation: roll/pitch from the horizon (yaw unobservable).
+    # Single-image orientation: roll/pitch from the horizon; yaw from a
+    # horizontal vanishing point when the scene is structured (else N/A).
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     det = detect_horizon(img)
-    roll, pitch = det["roll"], det["pitch"]
-    R_img = ypr_to_R(0.0, pitch, roll)
+    pose = image_pose(det, tgt_w, tgt_h)
+    roll, pitch, yaw = pose["roll"], pose["pitch"], pose["yaw"]
+    yaw_na = not pose["yaw_valid"]
+    R_img = ypr_to_R(yaw, pitch, roll)
     vsegs = detect_vertical_lines(img)
     vp = vanishing_point(vsegs)
 
@@ -220,7 +223,7 @@ def _run_image(args, path) -> dict:
         w = csv.writer(csv_file)
         w.writerow(CSV_HEADER)
         w.writerow([
-            0, "0.000", "N/A", f"{pitch:.2f}", f"{roll:.2f}",
+            0, "0.000", ("N/A" if yaw_na else f"{yaw:.2f}"), f"{pitch:.2f}", f"{roll:.2f}",
             "N/A", "N/A", "N/A",
             scene_label, f"{scene_conf:.2f}", "N/A", "N/A", "N/A",
             "N/A", "N/A",
@@ -232,17 +235,18 @@ def _run_image(args, path) -> dict:
     draw_vertical_vp(img, vsegs, vp)
     draw_horizon(img, det)
 
-    # Slim HUD (no FPS / stats) + XYZ gizmo from the horizon tilt.
+    # Slim HUD (no FPS / stats) + XYZ gizmo from the estimated orientation.
     draw_pose_overlay(
-        img, 0.0, pitch, roll, 0.0, 0, 0, tgt_w, tgt_h,
+        img, yaw, pitch, roll, 0.0, 0, 0, tgt_w, tgt_h,
         scene=scene_label, scene_conf=scene_conf,
-        yaw_na=True, show_fps=False, show_stats=False,
+        yaw_na=yaw_na, show_fps=False, show_stats=False,
     )
     draw_orientation_indicator(img, R_img)
     cv2.imwrite(out_png, img)
+    yaw_txt = "N/A" if yaw_na else f"{yaw:+.1f}"
     print(
         f"[result] scene={scene_label} ({scene_conf:.2f})  "
-        f"roll={roll:+.1f} pitch={pitch:+.1f}  png={out_png}  csv={out_csv}"
+        f"yaw={yaw_txt} roll={roll:+.1f} pitch={pitch:+.1f}  png={out_png}  csv={out_csv}"
     )
 
     return {

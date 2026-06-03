@@ -305,6 +305,7 @@ K = [[W, 0, W/2],
 ---
 
 ## Last Updated
+2026-06-03（d）— 單圖姿態升級：新增 `orient.image_pose`，用**水平消失點**取 yaw（結構化場景可觀測，否則 N/A），補上單圖原本缺的 yaw（參考經典消失點姿態技術，以自有 `vanishing_point()` 實作）。
 2026-06-03（c）— **修正 estimator 旋轉過度累積 bug**：`R_global=R_global@R` 每幀乘且參考幀持續多幀 → 過度累積（合成 GT 上 MAE 60–100°）；改 keyframe 相對累積 `R_base@R`，MAE→13°。新增驗收框架：`benchmarks/metrics|validate_pose|validate_scene`、`gen_synthetic3d.py`（3D 視差 + 精確 GT）、`docs/validation.md`。新增 `draw_cv.py`：中文 HUD（PIL）+ CV 證據繪製（影片光流箭頭 / 單圖水平線+特徵梯度場+消失點）。
 前次（b）— 室內/戶外改 `cv2.dnn`+Places365（3/6→6/6，HSV fallback）；`orient.py` 單圖水平線→XYZ。
 前次（a）— 新增 scene/motion/depth、estimator 9-tuple、單圖分支、webcam、CSV 15 欄、tests/。

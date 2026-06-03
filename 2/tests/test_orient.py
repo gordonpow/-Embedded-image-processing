@@ -17,6 +17,7 @@ from orient import (
     detect_horizon,
     detect_vertical_lines,
     vanishing_point,
+    image_pose,
 )
 
 
@@ -117,3 +118,38 @@ def test_vanishing_point_of_two_converging_lines():
 def test_vanishing_point_needs_two_lines():
     assert vanishing_point([(0, 0, 10, 10)]) is None
     assert vanishing_point([]) is None
+
+
+# --------------------- single-image yaw via vanishing point ---------------------
+
+W, H = 640, 480
+
+
+def _det(segments, roll=0.0, pitch=0.0):
+    return {"roll": roll, "pitch": pitch, "horizon_y": H / 2.0,
+            "center": (W / 2.0, H / 2.0), "segments": segments}
+
+
+def test_image_pose_recovers_yaw_from_converging_horizontal_lines():
+    # Near-horizontal lines all passing through a right-of-centre point (520,240)
+    # => a real horizontal vanishing point => observable yaw > 0.
+    segs = [(40, 180, 520, 240), (40, 240, 520, 240),
+            (40, 300, 520, 240), (100, 140, 520, 240)]
+    pose = image_pose(_det(segs), W, H)
+    assert pose["yaw_valid"] is True
+    assert pose["yaw"] > 5.0                  # VP to the right -> positive yaw
+
+
+def test_image_pose_parallel_lines_have_no_observable_yaw():
+    # Truly parallel horizontal lines (no convergence) -> yaw not observable.
+    segs = [(40, 200, 600, 200), (40, 260, 600, 260), (40, 320, 600, 320)]
+    pose = image_pose(_det(segs), W, H)
+    assert pose["yaw_valid"] is False
+    assert pose["yaw"] == 0.0
+
+
+def test_image_pose_passes_through_roll_and_pitch():
+    pose = image_pose(_det([], roll=4.0, pitch=-3.0), W, H)
+    assert abs(pose["roll"] - 4.0) < 1e-9
+    assert abs(pose["pitch"] - (-3.0)) < 1e-9
+    assert pose["yaw_valid"] is False          # no segments -> yaw N/A

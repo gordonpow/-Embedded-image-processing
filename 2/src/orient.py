@@ -98,6 +98,43 @@ def estimate_orientation_from_image(image: np.ndarray) -> tuple[float, float]:
     return det["roll"], det["pitch"]
 
 
+def image_pose(det: dict, w: int, h: int, focal_ratio: float = 1.0) -> dict:
+    """
+    Single-image yaw/pitch/roll using a horizontal vanishing point.
+
+    Roll/pitch come from the horizon (``det`` from ``detect_horizon``); yaw —
+    which a single image normally can't give — becomes observable in structured
+    (Manhattan) scenes where receding horizontal lines converge to a finite
+    vanishing point.  Its x-offset from the principal point yields the yaw.
+
+    yaw_valid is False when the horizontal lines are parallel (VP at infinity),
+    i.e. yaw is genuinely not observable — callers should show it as N/A.
+
+    (Vanishing-point pose is a standard CV technique; implemented here with our
+    own vanishing_point() helper.)
+    """
+    cx = w / 2.0
+    focal = w * focal_ratio
+    roll = float(det.get("roll", 0.0))
+    pitch = float(det.get("pitch", 0.0))
+    segs = det.get("segments", [])
+
+    yaw, yaw_valid = 0.0, False
+    if len(segs) >= 3:
+        angles = [math.degrees(math.atan2(y2 - y1, x2 - x1)) for x1, y1, x2, y2 in segs]
+        # Convergence requires a spread of angles; parallel lines (tiny spread)
+        # have their VP at infinity -> yaw unobservable.
+        if max(angles) - min(angles) > 3.0:
+            vp = vanishing_point(segs)
+            # A trustworthy horizontal VP sits within ~one image width of centre;
+            # larger offsets mean a near-parallel / noisy fit -> treat yaw as N/A
+            # rather than reporting a clamped, falsely-confident value.
+            if vp is not None and abs(vp[0] - cx) < 1.0 * w:
+                yaw = math.degrees(math.atan2(vp[0] - cx, focal))
+                yaw_valid = True
+    return {"yaw": yaw, "pitch": pitch, "roll": roll, "yaw_valid": yaw_valid}
+
+
 def detect_vertical_lines(image: np.ndarray, max_lines: int = 12) -> list:
     """Detect near-vertical Hough segments (structural / man-made edges)."""
     if image is None:
