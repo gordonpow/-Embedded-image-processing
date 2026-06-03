@@ -60,7 +60,7 @@
 >| **為什麼** | • 原始影片解析度（640×480、854×480 等）對 YOLOv8 推理造成計算負擔 <br> • 邊緣裝置（Raspberry Pi 4）CPU 資源有限，需要減輕推理壓力 <br> • 降低記憶體頻寬需求，提高快取效率 |
 >| **如何** | • 使用 `cv2.resize(img, (nw, nh), interpolation=cv2.INTER_LINEAR)` 等比縮放至目標邊長 <br> • 計算 scale 因子：`scale = size / max(h, w)` <br> • 使用 `cv2.copyMakeBorder()` 補灰色 padding (114,114,114)，保持原比例、避免扭曲 <br> • 返回 letterbox 影像、scale 係數、padding 偏移量供後續反算使用 |
 >| **函數參數** | `cv2.resize(img, (nw, nh), interpolation=cv2.INTER_LINEAR)` <br> • `img`: 輸入影像（numpy array） <br> • `(nw, nh)`: 目標尺寸（寬×高，單位像素） <br> • `interpolation=cv2.INTER_LINEAR`: 雙線性插值，平衡速度與品質 <br><br> `cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114,114,114))` <br> • `top/bottom/left/right`: 上下左右邊框寬度（像素） <br> • `cv2.BORDER_CONSTANT`: 用固定顏色填充 <br> • `value=(114,114,114)`: 灰色 padding（接近 ImageNet 平均值） |
->| **什麼** | • 輸入 640×480 → letterbox → 320×320（邊長）+ 灰邊 <br> • 減少運算量約 4 倍（像素數 640×480 = 307,200 → 320×320 = 102,400） <br> • Pi 預估 FPS 從無法執行提升至 ~11 |
+>| **什麼** | • 輸入 640×480 → letterbox → 320×320（邊長）+ 灰邊 <br> • 減少運算量約 4 倍（像素數 640×480 = 307,200 → 320×320 = 102,400） |
 >
 >---
 >
@@ -73,16 +73,16 @@
 >| **為什麼** | • OpenCV 讀進的影像採 BGR 順序（藍-綠-紅） <br> • 訓練用的資料集採 RGB 順序（紅-綠-藍） <br> • 若不轉換，模型會錯誤對應色彩通道，導致顏色辨識全錯 <br> • 會把紅火焰看成藍色，完全無法偵測 |
 >| **如何** | • 調用 `cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)` <br> • 轉換後除以 255.0 正規化至 [0, 1] 浮點數 <br> • 轉換成 `np.float32` 型態供 ONNX 推理 <br> • 在 letterbox 之後、轉 NCHW 之前執行 |
 >| **函數參數** | `cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)` <br> • `frame`: 輸入 BGR 影像（uint8, shape [H,W,3]） <br> • `cv2.COLOR_BGR2RGB`: 轉換碼，指定 BGR→RGB 映射 <br> • 返回 RGB 影像（同 dtype 與 shape） <br><br> `array.astype(np.float32) / 255.0` <br> • 將 uint8 [0-255] 轉為 float32 [0.0-1.0] <br> • 符合模型訓練時的輸入範圍 |
->| **什麼** | • 轉換：BGR [B, G, R] → RGB [R, G, B] <br> • 確保模型接收到與訓練時相同的色彩編碼 <br> • 火焰偵測率從 0% 提升至 24~70% |
+>| **什麼** | • 轉換：BGR [B, G, R] → RGB [R, G, B] <br> • 確保模型接收到與訓練時相同的色彩編碼  |
 >
 >#### 資料排列（HWC → NCHW）
 >
 >| | 說明 |
 >|---|---|
->| **為什麼** | • OpenCV 和圖像庫用 HWC 格式（Height, Width, Channel） <br> • ONNX 推理引擎採 NCHW 格式（Batch, Channel, Height, Width） <br> • NCHW 使同色通道資料在記憶體連續排列 <br> • 利於 SIMD 向量化運算，CPU 運算速度快 30~50% |
+>| **為什麼** | • OpenCV 和圖像庫用 HWC 格式（Height, Width, Channel） <br> • ONNX 推理引擎採 NCHW 格式（Batch, Channel, Height, Width） <br> • NCHW 使同色通道資料在記憶體連續排列 <br> |
 >| **如何** | • 使用 `rgb.transpose(2, 0, 1)` 重排維度：[H,W,C] → [C,H,W] <br> • 再用 `np.expand_dims(..., axis=0)` 增加 batch 維度：[C,H,W] → [1,C,H,W] <br> • 結果送入 ONNX Runtime 推理 |
 >| **函數參數** | `array.transpose(2, 0, 1)` <br> • 重排軸順序：軸 2（C）→ 軸 0、軸 0（H）→ 軸 1、軸 1（W）→ 軸 2 <br> • 從 [H,W,C] 變成 [C,H,W] <br><br> `np.expand_dims(array, axis=0)` <br> • 在指定軸位置插入新維度（長度為 1） <br> • 從 [C,H,W] 變成 [1,C,H,W]（NCHW 格式） |
->| **什麼** | • 原始 640×480×3 (HWC) → 1×3×320×320 (NCHW) <br> • 記憶體存取模式最優化 <br> • Pi 實測幀率提升 5~10 FPS |
+>| **什麼** | • 原始 320×320×3 (HWC) → 1×3×320×320 (NCHW) <br> |
 >
 >---
 >
@@ -93,7 +93,7 @@
 >| **為什麼** | • YOLOv8n 是輕量化版本，模型只有 ~12MB（FP32） <br> • 預訓練權重已在火煙影片上調教，mAP@0.5 ≈ 81.2% <br> • 不需要從頭訓練，直接可用，節省時間與資料集準備 <br> • 適合邊緣裝置即時推理 |
 >| **如何** | • 將預處理後的 1×3×320×320 張量輸入 ONNX Runtime <br> • 建立 `ort.InferenceSession(model_path, providers=['CPUExecutionProvider'])` <br> • 調用 `session.run(None, {input_name: tensor})` 執行推理 <br> • 無需 GPU，100% CPU 執行 |
 >| **函數參數** | `ort.InferenceSession(model_path, sess_options=opts, providers=['CPUExecutionProvider'])` <br> • `model_path`: ONNX 模型檔案路徑 <br> • `sess_options`: 會話選項（線程數、最佳化等級） <br> • `providers=['CPUExecutionProvider']`: 強制使用 CPU 後端（Pi 必須） <br><br> `session.run(None, {input_name: tensor})` <br> • `None`: 自動返回所有輸出 <br> • `{input_name: tensor}`: 輸入字典，鍵為輸入層名稱 <br> • 返回推理結果列表 |
->| **什麼** | • 輸入 1×3×320×320 → 輸出 1×6×2100 <br> • 輸出包含 2100 個候選框，每框 6 個值：[cx, cy, w, h, p_fire, p_smoke] <br> • 開發機推理延遲 8ms，Pi 預估 ~90ms <br> • 無需 GPU，Pi 4 單 CPU 即可運行 |
+>| **什麼** | • 輸入 1×3×320×320 → 輸出 1×6×2100 <br> • 輸出包含 2100 個候選框，每框 6 個值：[cx, cy, w, h, p_fire, p_smoke]  <br> • 無需 GPU，Pi 4 單 CPU 即可運行 |
 >
 >---
 >
@@ -123,7 +123,7 @@
 >| **為什麼** | • Raspberry Pi 4 CPU 資源有限 <br> • 2100 個框全部進入後處理（NMS、draw）會拖累幀率 <br> • 提早丟棄低分框能大幅減輕 CPU 負擔 |
 >| **如何** | • 在後處理階段最前面執行信心度過濾 <br> • 避免 2100 個框全部進入 NMS 迴圈 <br> • 減少 draw bounding box 與 contour 的迭代次數 |
 >| **函數參數** | `mask = confidences >= self.conf_thres` <br> • 建立布林遮罩，True 代表該框通過過濾 <br> • 之後用 `array[mask]` 萃取通過的框 <br><br> 循環過濾分類（per-class NMS）： <br> • `for cls in range(nc):` 對每個類別單獨執行 NMS <br> • 確保 fire 和 smoke 不會互相壓制 |
->| **什麼** | • Pi 後處理延遲從 ~110ms 降至 ~45ms <br> • 總推理延遲 200ms → 90ms，幀率提升 50% <br> • 系統順暢即時，滿足實時監控需求 |
+>| **什麼** | • 系統順暢即時，滿足即時監控需求 |
 
 
 ### 模組職責
