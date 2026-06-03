@@ -56,8 +56,34 @@ python benchmarks/validate_pose.py \
 - **效果**：MAE 100° → 13°。
 - 回歸測試：`tests/test_pose_accuracy.py`（先寫失敗測試 → 修 → 通過）。
 
-### 真實資料集（進階驗收）
-**TUM RGB-D**（[cvg.cit.tum.de](https://cvg.cit.tum.de/data/datasets/rgbd-dataset)）：動作捕捉系統提供精確 GT 軌跡（640×480@30Hz）。把 `groundtruth.txt` 的四元數轉成 yaw/pitch/roll，即可餵給 `validate_pose.py --video … --gt …`。其他可選：EuRoC MAV、ICL-NUIM、KITTI odometry。
+### 真實資料集實測：TUM RGB-D（已執行）
+
+**TUM RGB-D**（[cvg.cit.tum.de](https://cvg.cit.tum.de/data/datasets/rgbd-dataset)）是相機姿態的**業界標準 benchmark**——動作捕捉系統提供精確 GT 軌跡。我們已實際下載 `freiburg1_desk`（613 幀手持桌面拍攝）並比對。
+
+```bash
+# 下載並解壓 rgbd_dataset_freiburg1_desk 到 test_inputs/tum/ 後：
+python benchmarks/validate_tum.py \
+    --seq test_inputs/tum/rgbd_dataset_freiburg1_desk --plot docs/tum_desk_compare.png
+```
+驗收器自動：時間戳對齊 rgb↔GT、四元數→旋轉矩陣、相對第 0 幀比對、自動選慣例（幾何角度，慣例無關）。
+
+**結果（估計 vs 真值）：**
+
+![TUM 估計 vs 真值](tum_desk_compare.png)
+
+| 區段 | 表現 |
+|------|------|
+| 前 ~200 幀（約 7 秒） | **緊貼真值**，yaw/pitch/roll 三軸都跟得很準（誤差數度） |
+| 200 幀之後 | 開始**漂移**，到序列末端偏離 50–110° |
+| 整段 | 每軸 MAE：yaw 30° / pitch 21° / roll 46°；幾何旋轉誤差 MAE 55.8° |
+
+**誠實結論（報告重點）：**
+- **短期準、長期漂移**是**單目視覺里程計的本質特性**——沒有回環偵測（loop closure）與光束法平差（bundle adjustment），誤差會隨時間累積。
+- TUM `fr1` 序列是公認**最難**的（快速運動 + 動態模糊），連 ORB-SLAM 都需要完整後端才能處理。
+- 我們驗證過：把 keyframe 更新頻率從 3～9999 幀掃了一輪，**任何設定都無法消除長期漂移**（34–56°）——這確認是**架構層級的界線**，不是參數問題。
+- **適用界線**：本系統適合**短～中時長、中等速度**的片段（前 200 幀 MAE 約數度）；長時間快速序列需完整 SLAM 後端，超出 Pi 4B 即時預算。
+
+> 其他可選真實資料集：EuRoC MAV、ICL-NUIM、KITTI odometry。
 
 ---
 

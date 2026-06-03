@@ -15,3 +15,6 @@ models/*.pth.tar
 # Large/generated test videos — regenerate via test_inputs/gen_*.py
 # (the small ground-truth CSVs are kept for reproducible acceptance tests)
 test_inputs/*.mp4
+
+# Downloaded public datasets (TUM RGB-D etc.) — large, fetched on demand
+test_inputs/tum/
