@@ -1,0 +1,9 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Generated run outputs (annotated videos / CSVs / plots)
+runs/*.mp4
+runs/*.csv
+runs/*.png
+!runs/.gitkeep

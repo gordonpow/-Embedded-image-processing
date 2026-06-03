@@ -63,10 +63,15 @@ def _parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def source_is_available(source) -> bool:
+    """True for a webcam index (e.g. "0") or an existing file path."""
+    return str(source).isdigit() or os.path.exists(source)
+
+
 if __name__ == "__main__":
     args = _parse_args()
 
-    if not os.path.exists(args.source):
+    if not source_is_available(args.source):
         sys.exit(f"[error] source not found: {args.source}")
 
     stats = run(args)

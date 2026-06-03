@@ -2,6 +2,9 @@ import cv2
 import math
 import numpy as np
 
+# Reused for every "no pose recovered" return so callers get a stable shape.
+_EMPTY_PTS = np.empty((0, 2), dtype=np.float32)
+
 
 class PoseEstimator:
     """
@@ -72,14 +75,23 @@ class PoseEstimator:
 
     def process(
         self, gray: np.ndarray
-    ) -> tuple[float, float, float, int, int]:
+    ) -> tuple[float, float, float, int, int, np.ndarray | None, np.ndarray | None, np.ndarray, np.ndarray]:
         """
         Process one grayscale frame.
 
         Returns
         -------
-        (yaw_deg, pitch_deg, roll_deg, inlier_count, nfeatures)
+        (yaw_deg, pitch_deg, roll_deg, inlier_count, nfeatures, R_rel, t, pts1_in, pts2_in)
+
         inlier_count == -1 when this frame is used as a new reference.
+        R_rel       : relative rotation (3×3) of this view w.r.t. the current
+                      reference frame, or None when no pose was recovered.
+                      (This is the per-pair R needed for triangulation — NOT the
+                      cumulative R_global.)
+        t           : unit translation (3×1) from recoverPose, or None when no
+                      pose was recovered (reference frame / degenerate tracking).
+        pts1_in/pts2_in : (inlier_count, 2) float32 matched inlier points in the
+                      reference and current frame; empty (0, 2) when no pose.
         """
         kp, des = self._orb.detectAndCompute(gray, None)
         npts = len(kp)
@@ -88,12 +100,12 @@ class PoseEstimator:
         if self._ref_kp is None or des is None or len(des) < 8:
             self._ref_kp, self._ref_des = kp, des
             yaw, pitch, roll = self._smoothed_angles(-1)
-            return yaw, pitch, roll, -1, npts
+            return yaw, pitch, roll, -1, npts, None, None, _EMPTY_PTS, _EMPTY_PTS
 
         if self._ref_des is None or len(self._ref_des) < 8:
             self._ref_kp, self._ref_des = kp, des
             yaw, pitch, roll = self._smoothed_angles(-1)
-            return yaw, pitch, roll, -1, npts
+            return yaw, pitch, roll, -1, npts, None, None, _EMPTY_PTS, _EMPTY_PTS
 
         # Lowe ratio test
         raw_matches = self._matcher.knnMatch(self._ref_des, des, k=2)
@@ -107,7 +119,7 @@ class PoseEstimator:
         if len(good) < 8:
             self._ref_kp, self._ref_des = kp, des
             yaw, pitch, roll = self._smoothed_angles(-1)
-            return yaw, pitch, roll, -1, npts
+            return yaw, pitch, roll, -1, npts, None, None, _EMPTY_PTS, _EMPTY_PTS
 
         pts1 = np.float32([self._ref_kp[m.queryIdx].pt for m in good])
         pts2 = np.float32([kp[m.trainIdx].pt for m in good])
@@ -122,12 +134,18 @@ class PoseEstimator:
         if E is None or mask is None:
             self._ref_kp, self._ref_des = kp, des
             yaw, pitch, roll = self._smoothed_angles(-1)
-            return yaw, pitch, roll, -1, npts
+            return yaw, pitch, roll, -1, npts, None, None, _EMPTY_PTS, _EMPTY_PTS
 
-        inlier_count = int(mask.sum())
+        # Snapshot the essential-matrix inliers BEFORE recoverPose (which mutates
+        # mask in place) so the reported count and returned points stay consistent.
+        inlier_mask = mask.ravel().astype(bool)
+        inlier_count = int(inlier_mask.sum())
         inlier_ratio = inlier_count / len(good) if good else 0.0
 
-        _, R, _t, _ = cv2.recoverPose(E, pts1, pts2, self._K, mask=mask)
+        _, R, t, _ = cv2.recoverPose(E, pts1, pts2, self._K, mask=mask)
+
+        pts1_in = pts1[inlier_mask]
+        pts2_in = pts2[inlier_mask]
 
         # --- Rotation magnitude gate ---
         # reject R if it implies an unrealistically large per-frame rotation
@@ -140,7 +158,7 @@ class PoseEstimator:
             self._ref_kp, self._ref_des = kp, des
 
         yaw, pitch, roll = self._smoothed_angles(inlier_count)
-        return yaw, pitch, roll, inlier_count, npts
+        return yaw, pitch, roll, inlier_count, npts, R, t, pts1_in, pts2_in
 
     # ------------------------------------------------------------------
     # Helpers
