@@ -8,3 +8,4 @@ Pillow>=9.0           # Traditional-Chinese HUD text (falls back to English if a
 # models/export_places365_onnx.py — NOT required on the Raspberry Pi at runtime.
 # torch>=2.0
 # torchvision>=0.15
+# scipy>=1.10   # only for benchmarks/validate_yud.py (reads York Urban DB .mat)
