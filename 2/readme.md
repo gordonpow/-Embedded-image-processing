@@ -19,25 +19,25 @@
 ## 1. 需求
 
 ### 功能需求
-| 項目 | 說明 |
-|------|------|
-| 輸入 | 影片 (mp4/avi/mov)、即時攝影機（`0`/`1`…）、單張圖片 (jpg/png…) |
-| 姿態輸出 | yaw / pitch / roll（度） |
-| 場景輸出 | 室內 / 戶外（indoor / outdoor） |
-| 動態方向 | 相機運動方向（t）+ 畫面光流方向 + zoom |
-| 深度 | 相對深度分級 NEAR / MID / FAR（尺度相對，非絕對） |
-| 效能 | FPS@解析度 |
-| 視覺化 | 影片畫光流箭頭、單圖畫水平線/特徵梯度場/消失點 + XYZ 指示器 + 中文 HUD |
-| 無頭模式 | `--no-show` 於無螢幕 Pi 上執行 |
+| 項目     | 說明                                                                   |
+| -------- | ---------------------------------------------------------------------- |
+| 輸入     | 影片 (mp4/avi/mov)、即時攝影機（`0`/`1`…）、單張圖片 (jpg/png…)        |
+| 姿態輸出 | yaw / pitch / roll（度）                                               |
+| 場景輸出 | 室內 / 戶外（indoor / outdoor）                                        |
+| 動態方向 | 相機運動方向（t）+ 畫面光流方向 + zoom                                 |
+| 深度     | 相對深度分級 NEAR / MID / FAR（尺度相對，非絕對）                      |
+| 效能     | FPS@解析度                                                             |
+| 視覺化   | 影片畫光流箭頭、單圖畫水平線/特徵梯度場/消失點 + XYZ 指示器 + 中文 HUD |
+| 無頭模式 | `--no-show` 於無螢幕 Pi 上執行                                         |
 
 ### 規格需求
-| 項目 | 規格 |
-|------|------|
-| 目標平台 | Raspberry Pi 4B（ARM Cortex-A72，CPU-only） |
-| 解析度 | 預設 640×480（可調） |
-| 目標幀率 | 15–25 FPS @ 480p（姿態主迴圈） |
-| 依賴 | `opencv-python`、`numpy`、`matplotlib`、`Pillow`（中文 HUD，可選） |
-| 語言 | Python 3.10+ |
+| 項目     | 規格                                                               |
+| -------- | ------------------------------------------------------------------ |
+| 目標平台 | Raspberry Pi 4B（ARM Cortex-A72，CPU-only）                        |
+| 解析度   | 預設 640×480（可調）                                               |
+| 目標幀率 | 15–25 FPS @ 480p（姿態主迴圈）                                     |
+| 依賴     | `opencv-python`、`numpy`、`matplotlib`、`Pillow`（中文 HUD，可選） |
+| 語言     | Python 3.10+                                                       |
 
 ---
 
@@ -91,7 +91,7 @@ flowchart LR
    * **ORB** 相比 SIFT/SURF 運算速度極快且無專利限制，極適合樹莓派 CPU。
    * **BFMatcher** 利用漢明距離比對二進位描述子，在 CPU 上有極高效率。
    * **Lowe's Ratio Test** 透過排除相鄰過近、易混淆的特徵配對，大幅減少雜訊。
-3. **我們如何達成這個功能**：在 `estimator.py` 中初始化，並在 `L117-123` 呼叫 `self._matcher.knnMatch` 進行匹配篩選。
+3. **我們如何達成這個功能**：在 `estimator.py` 中初始化，並呼叫 `self._matcher.knnMatch` 進行匹配篩選。
 4. **函數參數意義與設定理由**：
    * **`cv2.ORB_create(nfeatures=500, nlevels=4)`**：
      * `nfeatures`：最大特徵點數。專案設定值為 `500`（可調整）。此值能維持本質矩陣求解的穩定性並控制 CPU 負載。
@@ -187,7 +187,7 @@ flowchart LR
 1. **他是什麼**：將寫有 HUD 與標註的影像壓縮存為 MP4 影片（或單張 PNG 圖片），並將各項感測器參數寫入 CSV 的資料輸出模組。
 2. **為什麼在這個專案要這樣做**：
    * 作為專案的交付成果與後續性能驗證（Benchmark）的依據。CSV 檔案方便比對 Ground Truth，而標注影片則供使用者離線展示與結果驗收。
-3. **我們如何達成這個功能**：在 `pipeline.py` 中，呼叫 `cv2.VideoWriter` 寫入視訊，並以 Python 內建的 `csv` 模組寫入資料。
+3. **我們如何達成這個功能**：在 `pipeline.py` 與 `L162-163` 中，呼叫 `cv2.VideoWriter` 寫入視訊，並以 Python 內建的 `csv` 模組寫入資料。
 4. **函數參數意義與設定理由**：
    * **`cv2.VideoWriter(filename, fourcc, fps, frameSize)`**：
      * `filename`：輸出路徑。預設存至 `runs/<stem>_pose.mp4`。
@@ -225,18 +225,18 @@ python plot_poses.py runs/<stem>_pose.csv
 ## 4. 設計
 
 ### 模組職責
-| 模組 | 職責 |
-|------|------|
-| `src/main.py` | CLI 入口、來源解析（檔案/webcam 整數/圖片） |
-| `src/pipeline.py` | 來源路由、幀迴圈、CSV、串接各模組 |
+| 模組               | 職責                                                                           |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `src/main.py`      | CLI 入口、來源解析（檔案/webcam 整數/圖片）                                    |
+| `src/pipeline.py`  | 來源路由、幀迴圈、CSV、串接各模組                                              |
 | `src/estimator.py` | ORB + Essential Matrix + **keyframe 相對累積** → yaw/pitch/roll、回傳 R/t/內點 |
-| `src/scene.py` | 室內/戶外：`cv2.dnn`+Places365（古典 HSV fallback） |
-| `src/motion.py` | `t` → 運動方向；內點位移 → 光流方向 / zoom |
-| `src/depth.py` | `triangulatePoints` → 相對深度 + NEAR/MID/FAR |
-| `src/orient.py` | 單圖 roll/pitch + 水平線/垂直線/消失點 + 單圖 yaw（VP） |
-| `src/draw_cv.py` | 中文 HUD（PIL，無字型退回英文）+ CV 證據繪製 |
-| `src/visualize.py` | HUD + XYZ 方向指示器 |
-| `benchmarks/` | `metrics` + `validate_pose` / `validate_scene`（驗收） |
+| `src/scene.py`     | 室內/戶外：`cv2.dnn`+Places365（古典 HSV fallback）                            |
+| `src/motion.py`    | `t` → 運動方向；內點位移 → 光流方向 / zoom                                     |
+| `src/depth.py`     | `triangulatePoints` → 相對深度 + NEAR/MID/FAR                                  |
+| `src/orient.py`    | 單圖 roll/pitch + 水平線/垂直線/消失點 + 單圖 yaw（VP）                        |
+| `src/draw_cv.py`   | 中文 HUD（PIL，無字型退回英文）+ CV 證據繪製                                   |
+| `src/visualize.py` | HUD + XYZ 方向指示器                                                           |
+| `benchmarks/`      | `metrics` + `validate_pose` / `validate_scene`（驗收）                         |
 
 完整資料流 / 公式推導見 [`docs/architecture.md`](docs/architecture.md)。
 
@@ -248,11 +248,11 @@ python plot_poses.py runs/<stem>_pose.csv
 frame_idx,timestamp_s,yaw_deg,pitch_deg,roll_deg,fps,inliers,nfeatures,
 scene,scene_conf,cam_motion,flow_motion,zoom_in,rel_depth,depth_level
 ```
-| 欄位 | 說明 |
-|------|------|
-| `scene` / `scene_conf` | indoor/outdoor + 信心值 |
-| `cam_motion` | FWD/BACK/LEFT/RIGHT/UP/DOWN/STILL（由 `t`） |
-| `flow_motion` / `zoom_in` | PAN-L/PAN-R/TILT-U/TILT-D… / 1=推近 |
+| 欄位                        | 說明                                            |
+| --------------------------- | ----------------------------------------------- |
+| `scene` / `scene_conf`      | indoor/outdoor + 信心值                         |
+| `cam_motion`                | FWD/BACK/LEFT/RIGHT/UP/DOWN/STILL（由 `t`）     |
+| `flow_motion` / `zoom_in`   | PAN-L/PAN-R/TILT-U/TILT-D… / 1=推近             |
 | `rel_depth` / `depth_level` | 相對深度（baseline 單位，非絕對）+ NEAR/MID/FAR |
 
 > 單圖：`cam_motion/flow_motion/depth_level` 為 `N/A`；`yaw` 結構化場景才有值，否則 `N/A`；另輸出 `runs/<stem>_pose.png`。
@@ -261,14 +261,14 @@ scene,scene_conf,cam_motion,flow_motion,zoom_in,rel_depth,depth_level
 
 ## 5. 方法說明
 
-| 技術 | WHAT | WHY | HOW |
-|------|------|-----|-----|
-| **ORB + Essential Matrix** | 從兩幀特徵對應求相對旋轉 | Pi CPU 友善、任意紋理場景皆可 | ORB→BFMatcher(Lowe)→`findEssentialMat`(RANSAC)→`recoverPose`→R,t |
-| **keyframe 相對累積** | 把每對旋轉累積成相對第 0 幀的姿態 | 參考幀會持續多幀，直接每幀累乘會**過度累積**（已修正的 bug） | `R_global = R_base @ R`，換參考幀時凍結 `R_base` |
-| **室內/戶外（cv2.dnn）** | Places365 ResNet18 場景分類 | 古典啟發式對夜景/雪地/亮室內失準（3/6→DNN 6/6） | `cv2.dnn.readNetFromONNX`→softmax→依官方 IO 表彙總；無模型退回 HSV |
-| **單圖 yaw（消失點）** | 結構化場景由水平消失點取 yaw | 單圖無運動拿不到 yaw，但走廊/建築的平行線會收斂 | `vanishing_point` 求交點，x 偏移→`atan2(Δx,f)`；近平行→N/A |
-| **動態方向** | 相機運動 + 畫面光流 | 重用既有 `t` 與內點，零額外成本 | `t` 主導軸→方向；內點中位位移→pan/tilt；徑向發散→zoom |
-| **相對深度** | 特徵點稀疏三角化 | 重用 R/t/內點，Pi 可承受 | `triangulatePoints(K[I\|0],K[R\|t])`→正 Z 中位數→分級（尺度相對） |
+| 技術                       | WHAT                              | WHY                                                          | HOW                                                                |
+| -------------------------- | --------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------ |
+| **ORB + Essential Matrix** | 從兩幀特徵對應求相對旋轉          | Pi CPU 友善、任意紋理場景皆可                                | ORB→BFMatcher(Lowe)→`findEssentialMat`(RANSAC)→`recoverPose`→R,t   |
+| **keyframe 相對累積**      | 把每對旋轉累積成相對第 0 幀的姿態 | 參考幀會持續多幀，直接每幀累乘會**過度累積**（已修正的 bug） | `R_global = R_base @ R`，換參考幀時凍結 `R_base`                   |
+| **室內/戶外（cv2.dnn）**   | Places365 ResNet18 場景分類       | 古典啟發式對夜景/雪地/亮室內失準（3/6→DNN 6/6）              | `cv2.dnn.readNetFromONNX`→softmax→依官方 IO 表彙總；無模型退回 HSV |
+| **單圖 yaw（消失點）**     | 結構化場景由水平消失點取 yaw      | 單圖無運動拿不到 yaw，但走廊/建築的平行線會收斂              | `vanishing_point` 求交點，x 偏移→`atan2(Δx,f)`；近平行→N/A         |
+| **動態方向**               | 相機運動 + 畫面光流               | 重用既有 `t` 與內點，零額外成本                              | `t` 主導軸→方向；內點中位位移→pan/tilt；徑向發散→zoom              |
+| **相對深度**               | 特徵點稀疏三角化                  | 重用 R/t/內點，Pi 可承受                                     | `triangulatePoints(K[I\|0],K[R\|t])`→正 Z 中位數→分級（尺度相對）  |
 
 > **為什麼 `cv2.dnn` 不違反「用 OpenCV」**：cv2.dnn 是 OpenCV 內建模組，CPU 載入 ONNX 推論**不需** PyTorch；室內/戶外變化慢，每 ~30 幀跑一次（Pi ~0.6–0.9s/次），姿態主迴圈不受影響。深入見 [`docs/architecture.md`](docs/architecture.md)。
 
@@ -278,12 +278,12 @@ scene,scene_conf,cam_motion,flow_motion,zoom_in,rel_depth,depth_level
 
 每項能力都有標準答案與通過門檻，完整方法書見 [`docs/validation.md`](docs/validation.md)。
 
-| 能力 | 標準答案 | 指標 | 門檻 | 現況 |
-|------|---------|------|------|------|
-| 姿態 | 合成 3D（精確逐幀 GT，`gen_synthetic3d.py`） | 每軸 MAE | < 15° | ✅ 13.3° |
-| 室內/戶外 | 標註檔 / Places365 驗證集 | 準確率 | ≥ 80% | ✅ 100%（6/6） |
-| 深度 | NYU/KITTI/DIODE | 尺度對齊 AbsRel / Spearman | ρ ≥ 0.6 | 📋 方法已定 |
-| 光流 | MPI Sintel / KITTI flow | EPE / 方向一致率 | < 3px | 📋 方法已定 |
+| 能力      | 標準答案                                     | 指標                       | 門檻    | 現況          |
+| --------- | -------------------------------------------- | -------------------------- | ------- | ------------- |
+| 姿態      | 合成 3D（精確逐幀 GT，`gen_synthetic3d.py`） | 每軸 MAE                   | < 15°   | ✅ 13.3°       |
+| 室內/戶外 | 標註檔 / Places365 驗證集                    | 準確率                     | ≥ 80%   | ✅ 100%（6/6） |
+| 深度      | NYU/KITTI/DIODE                              | 尺度對齊 AbsRel / Spearman | ρ ≥ 0.6 | 📋 方法已定    |
+| 光流      | MPI Sintel / KITTI flow                      | EPE / 方向一致率           | < 3px   | 📋 方法已定    |
 
 ```bash
 python benchmarks/validate_pose.py    # 姿態 → 每軸 MAE/RMSE + PASS/FAIL
@@ -306,10 +306,10 @@ python benchmarks/validate_scene.py   # 室內/戶外 → 準確率 + PASS/FAIL
 
 *圖說：8 張 York Urban 影像。🟢 綠線＝由 **GT 消失點**推得的**真實水平線**、🔵 藍線＝**我們**用 Hough 水平線/消失點估的水平線，文字為各自 roll。多數場景兩線貼合。*
 
-| 指標（我們 vs YUD GT，102 張） | 結果 |
-|------|------|
-| **roll**（水平線傾斜） | MAE **5.0°**、median 4.2°、57% 落在 5° 內 |
-| **pitch**（水平線高度） | MAE 6.6°、median 5.8° |
+| 指標（我們 vs YUD GT，102 張） | 結果                                      |
+| ------------------------------ | ----------------------------------------- |
+| **roll**（水平線傾斜）         | MAE **5.0°**、median 4.2°、57% 落在 5° 內 |
+| **pitch**（水平線高度）        | MAE 6.6°、median 5.8°                     |
 
 ```bash
 python benchmarks/validate_yud.py --base test_inputs/yud/db/YorkUrbanDB --out docs/yud_demo.png
@@ -337,10 +337,10 @@ python benchmarks/validate_yud.py --base test_inputs/yud/db/YorkUrbanDB --out do
 
 *圖說：逐幀播放 `freiburg1_desk`（公認最難）。前段藍≈綠，約 200 幀後藍字逐漸偏離綠字、`err` 攀升，呈現單目視覺里程計的**長期漂移**。*
 
-| 序列 | 速度/難度 | yaw | pitch | roll | 幾何旋轉 MAE |
-|------|-----------|-----|-------|------|-------------|
-| `freiburg1_xyz` | 中速（translation 為主） | 8.0° | 7.1° | **2.0°** | **11.9°** ✅ 全程貼合 |
-| `freiburg1_desk` | 快速＋動態模糊（公認最難） | 29.7° | 21.5° | 46.0° | 55.8°（前 7 秒準、後段漂移） |
+| 序列             | 速度/難度                  | yaw   | pitch | roll     | 幾何旋轉 MAE                 |
+| ---------------- | -------------------------- | ----- | ----- | -------- | ---------------------------- |
+| `freiburg1_xyz`  | 中速（translation 為主）   | 8.0°  | 7.1°  | **2.0°** | **11.9°** ✅ 全程貼合         |
+| `freiburg1_desk` | 快速＋動態模糊（公認最難） | 29.7° | 21.5° | 46.0°    | 55.8°（前 7 秒準、後段漂移） |
 
 **三軸對照曲線**（綠實線＝TUM 真值、紅虛線＝我們的估計）：
 
@@ -374,12 +374,12 @@ python benchmarks/tum_frame_compare.py --seq test_inputs/tum/rgbd_dataset_freibu
 
 以下為在 Raspberry Pi 4B 平台上執行的實測成果。表格左側為原始輸入的 GIF 動畫，右側為帶有相機姿態估計與場景感知（包含 `_pose` 後綴）的輸出結果。
 
-| 原始輸入檔案 | 姿態與場景感知輸出成果 |
-| :---: | :---: |
+|                      原始輸入檔案                       |                      姿態與場景感知輸出成果                       |
+| :-----------------------------------------------------: | :---------------------------------------------------------------: |
 | ![synthetic3d_pose_test](gif/synthetic3d_pose_test.gif) | ![synthetic3d_pose_test_pose](gif/synthetic3d_pose_test_pose.gif) |
-| ![synthetic_pose_test](gif/synthetic_pose_test.gif) | ![synthetic_pose_test_pose](gif/synthetic_pose_test_pose.gif) |
-| ![test_1](gif/test_1.gif) | ![test_1_pose](gif/test_1_pose.gif) |
-| ![test_2](gif/test_2.gif) | ![test_2_pose](gif/test_2_pose.gif) |
+|   ![synthetic_pose_test](gif/synthetic_pose_test.gif)   |   ![synthetic_pose_test_pose](gif/synthetic_pose_test_pose.gif)   |
+|                ![test_1](gif/test_1.gif)                |                ![test_1_pose](gif/test_1_pose.gif)                |
+|                ![test_2](gif/test_2.gif)                |                ![test_2_pose](gif/test_2_pose.gif)                |
 
 ---
 
@@ -407,19 +407,19 @@ python src/main.py video.mp4 --calib my_camera.yaml
 
 ## 8. Pi 4B 效能與參數調整
 
-| `--imgsz` | 解析度 | 預估 FPS |
-|-----------|--------|---------|
-| 320 | 320×240 | 25–35 |
-| 480 | 640×480 | 15–25 |
-| 720 | 1280×720 | 8–12 |
-| 1080 | 1920×1080 | 4–6 |
+| `--imgsz` | 解析度    | 預估 FPS |
+| --------- | --------- | -------- |
+| 320       | 320×240   | 25–35    |
+| 480       | 640×480   | 15–25    |
+| 720       | 1280×720  | 8–12     |
+| 1080      | 1920×1080 | 4–6      |
 
 > 以 `--nfeatures 500 --no-video` 為基準；室內/戶外每 ~30 幀跑一次，對 FPS 影響可忽略。
 
-| 問題 | 調整方式 |
-|------|---------|
-| 特徵/內點太少、姿態跳動 | 提高 `--nfeatures`、放寬 `--ratio-thresh` |
-| 姿態漂移過大 | 調低 `--keyframe-ratio`/`--keyframe-inliers`（更常換參考幀） |
-| Pi 太慢 | 降 `--imgsz`（如 320）、`--no-video` |
-| 室內/戶外不準 | 確認已產生 Places365 模型（否則退回較弱的啟發式） |
-| 單圖 yaw 常 N/A | 正常——僅結構化（建築/走廊/街道）場景才可觀測 |
+| 問題                    | 調整方式                                                     |
+| ----------------------- | ------------------------------------------------------------ |
+| 特徵/內點太少、姿態跳動 | 提高 `--nfeatures`、放寬 `--ratio-thresh`                    |
+| 姿態漂移過大            | 調低 `--keyframe-ratio`/`--keyframe-inliers`（更常換參考幀） |
+| Pi 太慢                 | 降 `--imgsz`（如 320）、`--no-video`                         |
+| 室內/戶外不準           | 確認已產生 Places365 模型（否則退回較弱的啟發式）            |
+| 單圖 yaw 常 N/A         | 正常——僅結構化（建築/走廊/街道）場景才可觀測                 |
