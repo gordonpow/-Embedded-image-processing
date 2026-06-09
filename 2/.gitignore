@@ -7,7 +7,7 @@ runs/*.mp4
 runs/*.csv
 runs/*.png
 !runs/.gitkeep
-
+*.mp4
 # Large model weights — regenerate via models/export_places365_onnx.py
 models/*.onnx
 models/*.pth.tar
