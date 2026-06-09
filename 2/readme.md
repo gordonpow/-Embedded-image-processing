@@ -241,6 +241,17 @@ python benchmarks/tum_frame_compare.py --seq test_inputs/tum/rgbd_dataset_freibu
 
 **結論**：中等速度的真實序列我們**全程貼合真值**（roll 僅 2° 誤差）；只有在最難的快速＋模糊序列才會長期漂移——這是單目 VO（無 SLAM 後端）的本質界線。
 
+### Raspberry Pi 4B 實測成果（GIF 對照）
+
+以下為在 Raspberry Pi 4B 平台上執行的實測成果。表格左側為原始輸入的 GIF 動畫，右側為帶有相機姿態估計與場景感知（包含 `_pose` 後綴）的輸出結果。
+
+| 原始輸入檔案 | 姿態與場景感知輸出成果 |
+| :---: | :---: |
+| ![synthetic3d_pose_test](gif/synthetic3d_pose_test.gif) | ![synthetic3d_pose_test_pose](gif/synthetic3d_pose_test_pose.gif) |
+| ![synthetic_pose_test](gif/synthetic_pose_test.gif) | ![synthetic_pose_test_pose](gif/synthetic_pose_test_pose.gif) |
+| ![test_1](gif/test_1.gif) | ![test_1_pose](gif/test_1_pose.gif) |
+| ![test_2](gif/test_2.gif) | ![test_2_pose](gif/test_2_pose.gif) |
+
 ---
 
 ## 7. CLI 參數
