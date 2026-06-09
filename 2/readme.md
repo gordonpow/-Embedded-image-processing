@@ -68,149 +68,132 @@ flowchart LR
 
 ### 流程圖方塊詳細技術說明
 
-本節針對系統流程圖中的各個核心方塊，從功能定義、專案動機、實作函式以及參數調校四大面向進行詳細解釋：
+本節將系統流程圖中每個方塊的內容以列表方式（1. 他是什麼、2. 為什麼要這樣做、3. 如何達成、4. 參數意義與設定理由）進行解釋：
 
 #### 1. PRE (前處理: Resize → Gray)
-* **他是什麼**：將輸入的原始彩色影像調整至目標解析度，並將其轉換成灰階影像的初級影像處理步驟。
-* **為什麼在這個專案要這樣做**：
-  * **降低解析度 (Resize)**：嵌入式平台（Raspberry Pi 4B）的 CPU 算力有限，若直接處理 1080p 等高解析度影像，會使特徵點提取與矩陣求解速度大降。降低至 `640x480` 能夠在保證幾何特徵清晰度的同時，將運算量限制在樹莓派能維持即時率（15–25 FPS）的範圍內。
-  * **轉為灰階 (Gray)**：ORB 特徵提取與配對演算法僅需單通道亮度資訊。將 BGR 轉為 Gray 可減少兩倍的記憶體資料量並加速像素梯度運算。
-* **我們如何達成這個功能**：在 [pipeline.py:L117-119](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/pipeline.py#L117-L119) 中，呼叫了：
-  * `cv2.resize`
-  * `cv2.cvtColor`
-* **函數參數意義與專案設定值**：
-  * **`cv2.resize(frame, (tgt_w, tgt_h))`**：
-    * `frame`：輸入的原始 BGR 彩色影格。
-    * `dsize`：目標解析度大小。專案在未設定校正或自訂大小下，預設為 `(640, 480)`。此值是針對樹莓派 4B CPU 算力極限做出的最佳化選擇。
-  * **`cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)`**：
-    * `frame`：輸入的 BGR 影像。
-    * `code`：色彩空間轉換常數。專案採用 `cv2.COLOR_BGR2GRAY`，將 3 通道 BGR 轉為單通道灰階。
+1. **他是什麼**：調整影像解析度並轉換為單通道灰階圖的前處理步驟。
+2. **為什麼在這個專案要這樣做**：
+   * **降低解析度 (Resize)**：嵌入式平台（Raspberry Pi 4B）的 CPU 算力有限，降低至 `640x480` 能夠在保證幾何特徵清晰度的同時，將運算量限制在樹莓派能維持即時率（15–25 FPS） the range.
+   * **轉為灰階 (Gray)**：ORB 演算法僅需亮度資訊。轉換為灰階可將資料量降為 1/3，加快像素梯度運算速度。
+3. **我們如何達成這個功能**：在 [pipeline.py:L117-119](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/pipeline.py#L117-L119) 中，呼叫 `cv2.resize` 與 `cv2.cvtColor`。
+4. **函數參數意義與設定理由**：
+   * **`cv2.resize(frame, (tgt_w, tgt_h))`**：
+     * `frame`：輸入影像。
+     * `dsize`：目標解析度。專案設定值為 `(tgt_w, tgt_h)`，預設為 `(640, 480)`。這是在樹莓派 4B 算力限制下，特徵保留與速度的最佳平衡點。
+   * **`cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)`**：
+     * `frame`：BGR 彩色影像。
+     * `code`：色彩空間轉換常數。專案採用 `cv2.COLOR_BGR2GRAY`，將彩色轉為單通道灰階以利特徵點偵測。
 
 #### 2. ORB (ORB + BFMatcher Lowe Ratio)
-* **他是什麼**：跨影格的特徵點偵測、描述子計算與特徵比對模組。
-* **為什麼在這個專案要這樣做**：
-  * 為了估計相機在空間中的相對運動，系統必須先找出前後兩張影像中對應的物理特徵點。
-  * **ORB** 演算法結合了 FAST 特徵點檢測與 BRIEF 描述子，運算速度極快、對旋轉具有不變性，且完全免費開源，相比 SIFT/SURF 更適合用於樹莓派的 CPU 計算。
-  * **BFMatcher** (Brute-Force) 可利用漢明距離（Hamming Distance）對二進位描述子進行硬件級的高速比對。
-  * **Lowe's Ratio Test** 能夠剔除匹配中距離相近、容易混淆的誤匹配點（Outliers），為後續的幾何估計提供高質量的點對。
-* **我們如何達成這個功能**：在 [estimator.py:L36-37](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/estimator.py#L36-L37) 中初始化演算法，並在 [L117-123](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/estimator.py#L117-L123) 進行配對與過濾：
-  * `cv2.ORB_create`
-  * `cv2.BFMatcher` 的 `knnMatch` 方法
-* **函數參數意義與專案設定值**：
-  * **`cv2.ORB_create(nfeatures=500, nlevels=4)`**：
-    * `nfeatures`：提取的最大特徵點數量。專案預設為 `500`（可經 CLI 調整）。此數量可在確保本質矩陣求解穩定性的同時，控制 CPU 負載。
-    * `nlevels`：影像金字塔層數。設定為 `4`（OpenCV 預設為 8）。這減少了多尺度特徵計算負擔，在樹莓派上可帶來約 **30% 的效能提升**。
-  * **`cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)`**：
-    * `normType`：距離度量方式。設定為 `cv2.NORM_HAMMING`，專用於 ORB 等二進位描述子，計算極快。
-    * `crossCheck`：是否啟用交叉比對。設定為 `False`，因為我們需要取得前二近匹配（Top 2）來進行 Lowe's Ratio 比對。
-  * **Lowe's Ratio Test 閥值**（專案代碼中的 `self._ratio_thresh = 0.75`）：
-    * 當最接近的匹配距離小於第二近匹配距離的 `0.75` 倍時，才判定該匹配有效。此比例能最大化過濾紋理重複區域產生的錯誤匹配。
+1. **他是什麼**：跨影格特徵點提取、描述子生成與暴力匹配過濾模組。
+2. **為什麼在這個專案要這樣做**：
+   * 要計算相機旋轉，必須找出兩影像間相同的特徵點。
+   * **ORB** 相比 SIFT/SURF 運算速度極快且無專利限制，極適合樹莓派 CPU。
+   * **BFMatcher** 利用漢明距離比對二進位描述子，在 CPU 上有極高效率。
+   * **Lowe's Ratio Test** 透過排除相鄰過近、易混淆的特徵配對，大幅減少雜訊。
+3. **我們如何達成這個功能**：在 [estimator.py:L36-37](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/estimator.py#L36-L37) 中初始化，並在 [L117-123](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/estimator.py#L117-L123) 呼叫 `self._matcher.knnMatch` 進行匹配篩選。
+4. **函數參數意義與設定理由**：
+   * **`cv2.ORB_create(nfeatures=500, nlevels=4)`**：
+     * `nfeatures`：最大特徵點數。專案設定值為 `500`（可調整）。此值能維持本質矩陣求解的穩定性並控制 CPU 負載。
+     * `nlevels`：影像金字塔層數。專案設定為 `4`（預設為 8）。這減少了多尺度特徵計算，提速約 **30%**。
+   * **`cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)`**：
+     * `normType`：距離類型。設定為 `cv2.NORM_HAMMING`，因 ORB 是二進位描述子，使用漢明距離匹配速度最快。
+     * `crossCheck`：雙向交叉匹配。設定為 `False`，以保留 Top 2 匹配來進行 Lowe's Ratio 比對。
+   * **Lowe's Ratio Test 閥值**（專案代碼中的 `self._ratio_thresh = 0.75`）：
+     * 最佳匹配距離必須小於次佳匹配的 `0.75` 倍，用以篩選出高置信度的物理對應點。
 
 #### 3. EM (findEssentialMat & recoverPose → R,t,內點)
-* **他是什麼**：利用對極幾何約束（Epipolar Geometry）來估算兩影格間相機相對旋轉矩陣 $R$ 與平移向量 $t$ 的幾何計算模組。
-* **為什麼在這個專案要這樣做**：
-  * 這是單目視覺里程計的幾何基礎。在獲得前後影格的特徵點匹配對後，不需要深度學習，即可利用經典幾何方法求解出本質矩陣（Essential Matrix），並進一步恢復相機的六自由度運動（由於單目尺度未知，此處平移向量 $t$ 為單位向量）。
-* **我們如何達成這個功能**：在 [estimator.py:L133-151](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/estimator.py#L133-L151) 中呼叫：
-  * `cv2.findEssentialMat`
-  * `cv2.recoverPose`
-* **函數參數意義與專案設定值**：
-  * **`cv2.findEssentialMat(points1, points2, cameraMatrix, method, prob, threshold)`**：
-    * `points1, points2`：前後影格匹配特徵點的坐標集。
-    * `cameraMatrix`：相機內參矩陣。若無相機校正檔，預設會以 `fx=fy=W` 的近似陣代替。
-    * `method`：強健估計演算法。設定為 `cv2.RANSAC`，用於在雜訊中尋找正確的幾何共識。
-    * `prob`：RANSAC 在輸出正確矩陣時的期望信心度。設定為 `0.999`。
-    * `threshold`：RANSAC 內點最大重投影誤差。設定為 `1.0` 像素（可經 `--ransac-thresh` 調整），可高精度過濾噪訊點。
-  * **`cv2.recoverPose(E, points1, points2, cameraMatrix, mask)`**：
-    * `E`：本質矩陣。
-    * `mask`：輸入/輸出內點遮罩。此處藉由手性約束（Chirality Constraint，物體投影必須在兩個相機的前方）進一步剔除無效點，並解算獲得相對旋轉矩陣 `R` 與相對平移向量 `t`。
+1. **他是什麼**：利用對極幾何求取「本質矩陣」來估算兩影格間相機相對旋轉與平移的模組。
+2. **為什麼在這個專案要這樣做**：
+   * 這是單目里程計的幾何基礎，不需深度學習模型。我們只需透過前後影格匹配的 2D 點對，求解本質矩陣，即可提取出相機的旋轉（Rotation, $R$）與方向向量（Translation, $t$）。
+3. **我們如何達成這個功能**：在 [estimator.py:L133-151](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/estimator.py#L133-L151) 中呼叫 `cv2.findEssentialMat` 與 `cv2.recoverPose`。
+4. **函數參數意義與設定理由**：
+   * **`cv2.findEssentialMat(points1, points2, cameraMatrix, method, prob, threshold)`**：
+     * `points1, points2`：匹配好的點對坐標。
+     * `cameraMatrix`：相機內參矩陣（預設以 `fx=fy=W` 的近似陣代替）。
+     * `method`：演算法。設定為 `cv2.RANSAC`，可強健地剔除錯誤匹配。
+     * `prob`：信賴度。設定為 `0.999`，以最大機率找到最優單應/本質矩陣。
+     * `threshold`：RANSAC 最大重投影誤差。設定為 `1.0` 像素，此值可高精度篩除有微小漂移的雜點。
+   * **`cv2.recoverPose(E, points1, points2, cameraMatrix, mask)`**：
+     * `E`：本質矩陣。
+     * `mask`：RANSAC 內點遮罩，此函式會透過手性約束（點必須在相機前方）篩除無效點並解出旋轉矩陣 $R$ 與平移向量 $t$。
 
 #### 4. POSE (keyframe 相對累積 & R_global → yaw/pitch/roll)
-* **他是什麼**：防止旋轉誤差隨幀數無限發散的關鍵影格機制，並將旋轉矩陣轉化為歐拉角的角度解算模組。
-* **為什麼在這個專案要這樣做**：
-  * **Keyframe 累積**：若每一影格都跟上一影格進行旋轉累加，單目視覺的局部誤差（Drift）會極快積累，導致姿態數值迅速漂移失真。透過關鍵影格（Keyframe）機制，當前影格僅與當前的 Keyframe 計算相對旋轉。只有當追蹤品質下降時，才將當前影格凍結為新 Keyframe，從而將漂移速率降到最低。
-  * **角度分解**：歐拉角 Yaw/Pitch/Roll 更符合人類對相機水平擺動、俯仰、側傾的直觀感受。
-* **我們如何達成這個功能**：在 [estimator.py:L158-194](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/estimator.py#L158-L194) 中，計算 $R_{global} = R_{base} \times R$，並在 `_rot_to_ypr` 函式中完成矩陣分解。
-* **函數參數意義與專案設定值**：
-  * **關鍵影格觸發條件** (`self._kf_min_ratio = 0.5`, `self._kf_min_inliers = 60`)：
-    * 當特徵匹配的內點比例低於 `50%` 或絕對內點數少於 `60` 個時，判定目前與 Keyframe 的重疊度不足，會更換參考幀（將當前全域旋轉凍結為 `R_base`）。這兩個數值確保了追蹤在樹莓派上的高可靠性，兼顧了減少關鍵影格切換次數（降漂移）與避免特徵丟失。
-  * **歐拉角解算順序** (YXZ 順序)：
-    * 專案內建轉換公式 $R = Ry(yaw) \times Rx(pitch) \times Rz(roll)$，對應相機坐標系（$Z$ 向前、$Y$ 向下、$X$ 向右），能正確還原 Yaw（偏航，Pan）、Pitch（俯仰，Tilt）、Roll（側傾，Lean）的角度。
+1. **他是什麼**：利用關鍵影格（Keyframe）機制防止誤差累積發散，並將旋轉矩陣分解為三軸姿態角度的計算模組。
+2. **為什麼在這個專案要這樣做**：
+   * **Keyframe 累積**：若逐幀累加旋轉，微小誤差會迅速累積導致嚴重漂移（Drift）。引入 Keyframe 機制後，只有在追蹤點數不夠或重疊率低時才更換參考影格，其餘時間只計算相對於 Keyframe 的姿態，可大幅延緩漂移。
+   * **角度分解**：將旋轉矩陣 $R$ 轉為 Euler 角，能直觀呈現相機的偏航（Yaw）、俯仰（Pitch）、側傾（Roll）。
+3. **我們如何達成這個功能**：在 [estimator.py:L158-194](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/estimator.py#L158-L194) 中，計算 $R_{global} = R_{base} 	imes R$，並在 `_rot_to_ypr` 函式中完成分解。
+4. **函數參數意義與設定理由**：
+   * **關鍵影格觸發門檻** (`self._kf_min_ratio = 0.5`, `self._kf_min_inliers = 60`)：
+     * 當特徵匹配的內點比例低於 `50%` 或絕對內點數少於 `60` 個時，會觸發更換 Keyframe（更新 `R_base`）。這可最大程度減少參考影格的切換頻率，從而壓低誤差漂移。
+   * **歐拉角解算順序**（YXZ 順序）：
+     * 專案依據相機坐標系定義（$Z$ 向前、$Y$ 向下、$X$ 向右）實作 $R = Ry(yaw) 	imes Rx(pitch) 	imes Rz(roll)$，以取得正確的三軸旋轉。
 
 #### 5. MOT (t → 運動方向 & 內點位移 → 光流/zoom)
-* **他是什麼**：基於平移向量與內點幾何位移，判斷相機主體運動（FWD/LEFT 等）與畫面上點的視在光流變化（平移、縮放）的分析模組。
-* **為什麼在這個專案要這樣做**：
-  * 該設計是「**零運算開銷**」的典型應用。因為 `recoverPose` 已算出了平移向量 $t$ 且保留了內點的匹配座標，我們只需通過簡單的 NumPy 幾何判斷（例如尋找平移向量的最大分量、點對在中心點的投影發散度），就能得出相機前進後退、畫面光流泛平移或變焦趨勢，完全不需要在樹莓派上執行高運算成本的光流估計網路。
-* **我們如何達成這個功能**：在 [motion.py:L30-81](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/motion.py#L30-L81) 中實現：
-  * `camera_motion`
-  * `flow_direction`
-* **函數參數意義與專案設定值**：
-  * `_STILL_EPS = 1e-6`：平移向量模長閾值，低於此值即判定相機為靜止（STILL），用來過濾數值噪訊。
-  * `_FLOW_MIN_PX = 1.0`（單位：像素）：特徵點位移的中位數若小於 1 像素，則判定畫面沒有明顯的 Pan/Tilt 移動。
-  * `_ZOOM_MIN = 0.0`：當特徵點相對於幾何質心的平均徑向位移投影大於 `0` 且大於 `1.0` 像素時，即判定畫面正在推近（Zoom-in）。
+1. **他是什麼**：分析相機主體移動（前後左右上下）與畫面特徵點視在光流變化（平移、縮放）的運算模組。
+2. **為什麼在這個專案要這樣做**：
+   * 這是「**零運算開銷**」的設計。我們直接利用已算好的平移向量 $t$（相機運動）與內點匹配座標（畫面光流），用簡單的幾何規則（判斷主導平移分量、特徵點相對於質心的平均發散投影）做分析，不需在樹莓派上執行高負載的密集光流網路。
+3. **我們如何達成這個功能**：在 [motion.py:L30-81](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/motion.py#L30-L81) 中實現 `camera_motion` 和 `flow_direction` 函式。
+4. **函數參數意義與設定理由**：
+   * `_STILL_EPS = 1e-6`：平移量最小閾值。設定為 `1e-6` 可有效忽略浮點運算的微小噪訊，判定相機為靜止（STILL）。
+   * `_FLOW_MIN_PX = 1.0`（單位：像素）：點對移動的中位數若小於 1 像素，則判定畫面為 STILL，避免感測器噪點引發誤判。
+   * `_ZOOM_MIN = 0.0`：當特徵點徑向發散投影均值大於 `0` 且大於 `1.0` 像素時，即判定畫面正在推近（Zoom-in）。
 
 #### 6. DEP (triangulatePoints → 相對深度)
-* **他是什麼**：利用雙相機視角下的匹配內點進行三角化，求解特徵點三維坐標（$Z$ 軸值）以判斷場景相對深度分級（NEAR/MID/FAR）的模組。
-* **為什麼在這個專案要這樣做**：
-  * 在樹莓派等 CPU 單板電腦上無法即時運行深度估計模型（如 Monodepth2）。此處直接重用已算好的相機內參 $K$、旋轉矩陣 $R$、平移向量 $t$ 與特徵內點，通過三角化公式快速算出一組稀疏的三維點雲，並以其深度中位數提供粗略的場景深度分類，耗時極短。
-* **我們如何達成這個功能**：在 [depth.py:L24-66](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/depth.py#L24-L66) 中呼叫：
-  * `cv2.triangulatePoints`
-* **函數參數意義與專案設定值**：
-  * **`cv2.triangulatePoints(projMatr1, projMatr2, projPoints1, projPoints2)`**：
-    * `projMatr1` (3x4)：第一相機投影矩陣，設為 $K \times [I | 0]$。
-    * `projMatr2` (3x4)：第二相機投影矩陣，設為 $K \times [R | t]$。
-    * `projPoints1, projPoints2`：第一與第二影格匹配好的特徵點坐標（需轉置為 `2xN`）。
-  * **深度門檻** (`_NEAR_MAX = 5.0`, `_FAR_MIN = 15.0`)：
-    * 單目相機在平移時尺度未知（$t$ 模長固定為 1），因此三角化結果代表的並非實際公尺數，而是「相對於相機基線的相對倍數」。
-    * 專案設定當點雲深度中位數小於 5 倍基線時為 `NEAR`（近場），大於 15 倍時為 `FAR`（遠景），介於中間為 `MID`（中景），符合多數移動相機的場景分級。
+1. **他是什麼**：利用雙視角幾何三角化，計算特徵點三維坐標（$Z$ 軸值）以估算場景相對深度分級（NEAR/MID/FAR）的模組。
+2. **為什麼在這個專案要這樣做**：
+   * 樹莓派 CPU 無法即時運行深度學習網路。專案重用已知的相機內參 $K$、旋轉矩陣 $R$、平移向量 $t$ 以及特徵內點座標，呼叫 OpenCV 三角化函式，以極低開銷獲得場景的相對深度中位數並進行分級。
+3. **我們如何達成這個功能**：在 [depth.py:L24-66](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/depth.py#L24-L66) 中，呼叫 `cv2.triangulatePoints`。
+4. **函數參數意義與設定理由**：
+   * **`cv2.triangulatePoints(projMatr1, projMatr2, projPoints1, projPoints2)`**：
+     * `projMatr1` (3x4)：第一相機投影矩陣，設為 $K 	imes [I | 0]$。
+     * `projMatr2` (3x4)：第二相機投影矩陣，設為 $K 	imes [R | t]$。
+     * `projPoints1, projPoints2`：匹配好的點對坐標（需轉置為 `2xN`）。
+   * **深度門檻** (`_NEAR_MAX = 5.0`, `_FAR_MIN = 15.0`)：
+     * 單目估計的平移向量 $t$ 為單位向量（長度為 1），因此三角化結果代表的並非絕對公尺，而是「相對於相機基線的相對倍數」。中位數小於 5 倍基線時判定為 `NEAR`，大於 15 倍時判定為 `FAR`，其餘為 `MID`。此區間能有效區分室內外近中遠景。
 
 #### 7. SCN (cv2.dnn Places365 → 室內/戶外)
-* **他是什麼**：利用 OpenCV DNN 模組載入 Places365 ResNet18 神經網路，進行影像場景分類以判斷場景為室內（indoor）或戶外（outdoor）的模組。
-* **為什麼在這個專案要這樣做**：
-  * 單純依賴低階的影像特徵（如色彩 HSV、天空色佔比、亮度等啟發式規則）在光照劇烈變化、夜間或雪地等戶外環境極易誤判（基準測試僅 3/6 準確率）。
-  * 引入輕量化 CNN 模型（Places365）能將精準度拉升到 **100% (6/6)**。
-  * 為了避免 CNN 模型拖慢姿態估計（在樹莓派上 ResNet18 單次推論耗時約 0.6–0.9s），設定了 `N` 幀的推論間隔（例如每 10 幀運行一次），完美兼顧了執行效能與分類準確度。
-* **我們如何達成這個功能**：在 [scene.py:L127-163](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/scene.py#L127-L163) 中實作，使用了：
-  * `cv2.dnn.readNetFromONNX` 載入模型
-  * 網路推理的 `setInput` 與 `forward` 方法
-* **函數參數意義與專案設定值**：
-  * **`cv2.dnn.readNetFromONNX(model_path)`**：
-    * `model_path`：ONNX 模型檔案路徑。專案使用 `places365_resnet18.onnx`。ResNet18 模型小、參數量少，極其適合嵌入式裝置進行 CPU 推理。
-  * **模型影像輸入大小** (`_DNN_SIZE = 224`)：
-    * 配合 Places365 網路結構，在 [scene.py:L156](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/scene.py#L156) 中，影像會被 `cv2.resize` 到 `(224, 224)`，並除以 255.0 做歸一化，減去 ImageNet 的 Mean 再除以 Std。這是確保模型特徵分佈與訓練時一致的標準化處理。
-  * **推論間隔** (`_SCENE_INTERVAL = 10`，定義於 [pipeline.py:L23](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/pipeline.py#L23))：
-    * 每隔 `10` 幀才對影格做一次場景判定，其餘幀沿用上一次快取。此參數有效控制了整體 FPS 降幅，避免樹莓派發生卡頓。
+1. **他是什麼**：使用 OpenCV DNN 模組載入 Places365 ResNet18 神經網路，進行室內與戶外場景分類判定之模組。
+2. **為什麼在這個專案要這樣做**：
+   * 古典色彩或天空偵測規則在光照劇烈變化、明亮室內或夜景中容易失準（測試準確率僅 3/6）。
+   * 引入 Places365 CNN ONNX 模型，可將判定準確率大幅提升至 **100% (6/6)**。
+   * 為防止神經網路推理（在樹莓派上單次耗時 0.6–0.9s）拖慢姿態估算，採取了推論間隔設計，在保證精準度的同時維持流暢度。
+3. **我們如何達成這個功能**：在 [scene.py:L127-163](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/scene.py#L127-L163) 中使用 `cv2.dnn.readNetFromONNX` 載入模型，並呼叫推理的 `setInput` 與 `forward` 方法。
+4. **函數參數意義與設定理由**：
+   * **`cv2.dnn.readNetFromONNX(model_path)`**：
+     * `model_path`：ONNX 模型路徑。專案採用 `places365_resnet18.onnx`。ResNet18 結構簡單且推理速度快，符合嵌入式設備之限制。
+   * **DNN 影像預處理** (`_DNN_SIZE = 224`)：
+     * 將輸入影格 `cv2.resize` 到 `(224, 224)`，並除以 255.0 做歸一化，減去 ImageNet 的 Mean 再除以 Std。這是確保模型輸入特徵分佈正確的標準做法。
+   * **推論間隔** (`_SCENE_INTERVAL = 10`，於 [pipeline.py:L23](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/pipeline.py#L23))：
+     * 每隔 `10` 幀才重新推論一次場景，其餘幀使用快取結果。在 20 FPS 下約 0.5 秒執行一次，可將 DNN 造成的 CPU 佔用率降到最低。
 
 #### 8. VIZ (疊圖 + 中文 HUD)
-* **他是什麼**：將分析得到的 Yaw/Pitch/Roll 姿態角度、FPS、運動方向、場景、相對深度，以及畫面上特徵點與光流的箭頭和右上角的 3D XYZ 姿態軸，實時疊加繪製在原始彩圖上的模組。
-* **為什麼在這個專案要這樣做**：
-  * 提供直覺化的視覺回饋，讓使用者與開發者在畫面上直接觀察到相機的當前姿態與系統追蹤的細節線索（例如特徵點在哪裡、光流是否符合移動方向）。
-  * 支援中文繁體 HUD，提升介面的現代感與展示效果。
-* **我們如何達成這個功能**：在 [visualize.py](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/visualize.py) 與 [draw_cv.py](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/draw_cv.py) 中，使用：
-  * `cv2.circle`、`cv2.arrowedLine` 等畫線、畫圓函數。
-  * 當系統載入 Pillow 函式庫且 Windows 或 Linux 系統中存在 CJK 中文字型時，會以 Pillow 繪製反鋸齒繁體中文；若無字型則自動退回 OpenCV 內建的 Hershey ASCII 英文顯示。
-* **函數參數意義與專案設定值**：
-  * **`cv2.arrowedLine(frame, pt1, pt2, color=(255, 255, 0), thickness=1, line_type=cv2.LINE_AA, tipLength=0.3)`**（繪製光流箭頭）：
-    * `pt1, pt2`：配對特徵點的前後影格坐標。
-    * `color`：使用青藍色 `(255, 255, 0)`。
-    * `line_type`：`cv2.LINE_AA`，這代表反鋸齒線條（Anti-aliased），可使在影像中繪製的微小箭頭看起來極度平滑，不會有明顯的顆粒感或鋸齒。
-  * **`cv2.circle(frame, (cx, cy), scale + 6, color=(25, 25, 25), thickness=-1, lineType=cv2.LINE_AA)`**（繪製右上角姿態底盤）：
-    * `cx, cy`：圓盤中心點坐標。專案將其定位在 `(w - 80, 80)`。
-    * `scale + 6`：圓盤半徑（預設 scale=55，即半徑為 61 像素）。
-    * `thickness=-1`：實心圓，底色設為深灰色 `(25, 25, 25)`，作為姿態指示器箭頭的背景阻隔板。
+1. **他是什麼**：將姿態角度、FPS、運動方向、場景、相對深度，以及特徵點、光流箭頭、3D XYZ 旋轉指示軸實時繪製疊加在影像上的視覺化模組。
+2. **為什麼在這個專案要這樣做**：
+   * 提供直覺化的視覺回饋，讓使用者能直觀觀察系統的運作狀況（如特徵點分佈、光流是否符合移動方向、3D 姿態軸是否正確旋轉），便於調試與成果展示。
+   * 支援繁體中文 HUD，提升介面的美觀度與專業感。
+3. **我們如何達成這個功能**：在 [visualize.py](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/visualize.py) 與 [draw_cv.py](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/draw_cv.py) 中，使用 `cv2.circle`、`cv2.arrowedLine` 等函式繪圖，並利用 Pillow 繪製反鋸齒繁體中文（若無字型則自動退回 OpenCV 內建 ASCII 英文）。
+4. **函數參數意義與設定理由**：
+   * **`cv2.arrowedLine(frame, pt1, pt2, color=(255, 255, 0), thickness=1, line_type=cv2.LINE_AA, tipLength=0.3)`**（繪製光流箭頭）：
+     * `pt1, pt2`：配對點的前後影格座標。
+     * `color`：青藍色 `(255, 255, 0)`。
+     * `line_type`：`cv2.LINE_AA`（反鋸齒線），可讓細小的箭頭邊緣極其平滑，提供高品質的視覺外觀。
+   * **`cv2.circle(frame, (cx, cy), scale + 6, color=(25, 25, 25), thickness=-1, lineType=cv2.LINE_AA)`**（繪製右上角姿態底盤）：
+     * `cx, cy`：圓盤中心點，專案定位於 `(w - 80, 80)`。
+     * `scale + 6`：圓盤半徑（ scale=55，即半徑為 61 像素），實心填充（`thickness=-1`），作為 3D 姿態軸的背景板，防止影片亮色背景干擾。
 
 #### 9. OUT (標注 mp4/PNG + CSV)
-* **他是什麼**：將畫好 HUD 與指示線條的串流影像壓縮存檔為 MP4 影片（或單張 PNG 圖片），並把每影格感測器參數寫入 CSV 檔案的資料輸出模組。
-* **為什麼在這個專案要這樣做**：
-  * 用於離線結果展示（Output Video）以及後續姿態與場景分類性能比對與繪製數據曲線圖（CSV 數據報表）。
-* **我們如何達成這個功能**：在 [pipeline.py:L88-90](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/pipeline.py#L88-L90) 與 [L162-163](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/pipeline.py#L162-L163) 中，呼叫：
-  * `cv2.VideoWriter` 寫入影格
-  * Python 的 `csv` 模組寫入資料
-* **函數參數意義與專案設定值**：
-  * **`cv2.VideoWriter(filename, fourcc, fps, frameSize)`**：
-    * `filename`：輸出路徑。預設存至 `runs/<stem>_pose.mp4`。
-    * `fourcc`：四字元編碼。設定為 `cv2.VideoWriter_fourcc(*"mp4v")`，這能輸出成高相容性、無需額外解碼器即可在主流系統上播放的 MP4 視訊檔。
-    * `fps`：每秒影格數。設定為原始影片的幀率，防止播放速度失真。
-    * `frameSize`：影像解析度大小。設為目標解析度 `(tgt_w, tgt_h)`，若尺寸不一致會導致影片寫入失敗或毀損。
+1. **他是什麼**：將寫有 HUD 與標註的影像壓縮存為 MP4 影片（或單張 PNG 圖片），並將各項感測器參數寫入 CSV 的資料輸出模組。
+2. **為什麼在這個專案要這樣做**：
+   * 作為專案的交付成果與後續性能驗證（Benchmark）的依據。CSV 檔案方便比對 Ground Truth，而標注影片則供使用者離線展示與結果驗收。
+3. **我們如何達成這個功能**：在 [pipeline.py:L88-90](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/pipeline.py#L88-n90) 與 [L162-163](file:///c:/Embedded-image-processing/final_project/-Embedded-image-processing/2/src/pipeline.py#L162-L163) 中，呼叫 `cv2.VideoWriter` 寫入視訊，並以 Python 內建的 `csv` 模組寫入資料。
+4. **函數參數意義與設定理由**：
+   * **`cv2.VideoWriter(filename, fourcc, fps, frameSize)`**：
+     * `filename`：輸出路徑。預設存至 `runs/<stem>_pose.mp4`。
+     * `fourcc`：四字元編碼。設定為 `cv2.VideoWriter_fourcc(*"mp4v")`，這能輸出成高相容性的 MP4 格式。
+     * `fps`：每秒影格數。設定為原始影片的幀率，防止播放速度失真。
+     * `frameSize`：影像解析度大小。設為目標解析度 `(tgt_w, tgt_h)`，確保視訊編碼寫入正常。
 
 ---
 
