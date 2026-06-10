@@ -304,7 +304,7 @@ python benchmarks/validate_scene.py   # 室內/戶外 → 準確率 + PASS/FAIL
 
 ![YUD 單圖姿態：GT vs 我們](docs/yud_demo.png)
 
-*圖說：8 張 York Urban 影像。🟢 綠線＝由 **GT 消失點**推得的**真實水平線**、🔵 藍線＝**我們**用 Hough 水平線/消失點估的水平線，文字為各自 roll。多數場景兩線貼合。*
+*圖說：8 張 York Urban 影像。🟢 綠線＝由 **GT 消失點**推得的**真實水平線**、🟠 橘線＝**我們**用 Hough 水平線/消失點估的水平線，文字為各自 roll。多數場景兩線貼合。*
 
 | 指標（我們 vs YUD GT，102 張） | 結果                                      |
 | ------------------------------ | ----------------------------------------- |
@@ -323,7 +323,7 @@ python benchmarks/validate_yud.py --base test_inputs/yud/db/YorkUrbanDB --out do
 
 在 [TUM RGB-D](https://cvg.cit.tum.de/data/datasets/rgbd-dataset) 公開測試序列上，用**同一批測試影格**跑我們的系統，和他們的**動作捕捉真值**逐幀對比。
 
-> **圖例**：🟢 綠字 `TUM TRUTH` = TUM 動捕**真值**（他們的標準答案）　🔵 藍字 `OUR EST.` = **我們**系統的估計。
+> **圖例**：🟢 綠字 `TUM TRUTH` = TUM 動捕**真值**（他們的標準答案）　🟠 橘字 `OUR EST.` = **我們**系統的估計。
 
 **① 中速序列 `freiburg1_xyz` — 全程貼合真值：**
 
@@ -354,7 +354,7 @@ python benchmarks/validate_yud.py --base test_inputs/yud/db/YorkUrbanDB --out do
 
 *圖說：同樣三軸對幀序。前 ~200 幀紅綠貼合，之後紅線（我們）發散偏離綠線（真值），對應幾何旋轉誤差由數度增至約 110°——這就是快速＋動態模糊序列上的漂移。*
 
-**`freiburg1_desk` 逐幀並排**（真實測試影像 + 🟢TUM 真值 vs 🔵我們的估計）：
+**`freiburg1_desk` 逐幀並排**（真實測試影像 + 🟢TUM 真值 vs 🟠我們的估計）：
 ![desk 逐幀並排](docs/tum_compare_frames.png)
 
 *圖說：四個代表幀（frame 40／150／200／400）的單格快照。黑底上排綠字＝TUM 真值、下排藍字＝我們估計的 Y/P/R，可逐格核對數字差距；可見前段接近、frame 400 已明顯偏離。*
