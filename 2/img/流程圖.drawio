@@ -1,0 +1,182 @@
+<mxfile host="65bd71144e">
+    <diagram id="flow1" name="系統流程圖">
+        <mxGraphModel dx="1513" dy="606" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="2000" pageHeight="2000" background="#000000" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="box1" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#4da6ff;strokeWidth=2;dashed=0;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="100" width="920" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="lbl1" value="pipeline.py (輸入)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4da6ff;strokeColor=#4da6ff;fontColor=#000000;fontStyle=1;fontSize=11;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="85" width="130" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_input" value="輸入影片 / Webcam / 單圖" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="130" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_pre" value="前處理 (PRE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4da6ff;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="130" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="box3" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#ffd633;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="240" width="180" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="lbl3" value="orient.py (單圖)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffd633;strokeColor=#ffd633;fontColor=#000000;fontStyle=1;fontSize=11;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="225" width="110" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_orient" value="單圖姿態估算" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ffd633;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="330" width="140" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="box2" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#5cd65c;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="240" width="360" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="lbl2" value="estimator.py (影片)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#5cd65c;strokeColor=#5cd65c;fontColor=#000000;fontStyle=1;fontSize=11;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="225" width="120" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_orb" value="ORB 特徵匹配 (ORB)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#5cd65c;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="270" width="300" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_em" value="本質矩陣與姿態求解 (EM)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#5cd65c;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="330" width="300" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_pose" value="Keyframe 姿態累積 (POSE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#5cd65c;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="330" y="390" width="300" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="box5" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#ff6666;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+                    <mxGeometry x="170" y="507.5" width="220" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="lbl5" value="motion.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff6666;strokeColor=#ff6666;fontColor=#000000;fontStyle=1;fontSize=11;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="190" y="492.5" width="80" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_motion" value="運動與光流分析 (MOT)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ff6666;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="190" y="537.5" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="box6" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#9933fc;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+                    <mxGeometry x="540" y="500" width="220" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="lbl6" value="depth.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#9933fc;strokeColor=#9933fc;fontColor=#000000;fontStyle=1;fontSize=11;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="485" width="80" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_depth" value="相對深度估算 (DEP)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9933fc;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="530" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="box4" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#ff9933;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+                    <mxGeometry x="780" y="500" width="220" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="lbl4" value="scene.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff9933;strokeColor=#ff9933;fontColor=#000000;fontStyle=1;fontSize=11;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="485" width="80" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_scene" value="室內外分類判定 (SCN)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#ff9933;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="800" y="530" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="box7" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#33cccc;strokeWidth=2;dashed=0;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="660" width="920" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="lbl7" value="draw_cv.py &amp; visualize.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#33cccc;strokeColor=#33cccc;fontColor=#000000;fontStyle=1;fontSize=11;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="645" width="180" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_draw" value="底層視覺化繪製 (draw_cv.py)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#33cccc;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="690" width="380" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_viz" value="XYZ 指示器與 HUD 整合 (visualize.py)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#33cccc;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="690" width="380" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="box8" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#4da6ff;strokeWidth=2;dashed=0;verticalAlign=top;" parent="1" vertex="1">
+                    <mxGeometry x="80" y="820" width="920" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="lbl8" value="pipeline.py (輸出)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4da6ff;strokeColor=#4da6ff;fontColor=#000000;fontStyle=1;fontSize=11;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="805" width="130" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_out" value="資料輸出 (OUT)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#4da6ff;fontColor=#000000;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="850" width="220" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="node_output" value="輸出成果檔 (MP4)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="600" y="850" width="180" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_in_to_pre" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;" parent="1" source="node_input" target="node_pre" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_pre_to_orb" value="連續影像幀" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#ffffff;fontSize=9;labelBackgroundColor=#000000;" parent="1" source="node_pre" target="node_orb" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_pre_to_orient" value="單張圖片" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#ffffff;fontSize=9;labelBackgroundColor=#000000;" parent="1" source="node_pre" target="node_orient" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="525" y="190"/>
+                            <mxPoint x="170" y="190"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_pre_to_scene" value="每 N 幀 / 單圖" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#ffffff;fontSize=9;labelBackgroundColor=#000000;" parent="1" source="node_pre" target="node_scene" edge="1">
+                    <mxGeometry x="0.4961" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="615" y="220"/>
+                            <mxPoint x="890" y="220"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_orb_to_em" value="" style="rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;" parent="1" source="node_orb" target="node_em" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_em_to_pose" value="" style="rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;" parent="1" source="node_em" target="node_pose" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_em_to_motion" value="相對 R, t, 內點" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#ffffff;fontSize=9;labelBackgroundColor=#000000;" parent="1" source="node_em" target="node_motion" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="280" y="350"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_em_to_depth" value="相對 R, t" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#ffffff;fontSize=9;labelBackgroundColor=#000000;" parent="1" source="node_em" target="node_depth" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="680" y="350"/>
+                            <mxPoint x="680" y="480"/>
+                            <mxPoint x="650" y="480"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_pose_to_viz" value="姿態角度 (YPR)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.15;entryY=0;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#ffffff;fontSize=9;labelBackgroundColor=#000000;" parent="1" source="node_pose" target="node_viz" edge="1">
+                    <mxGeometry x="-0.5683" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="420" y="610"/>
+                            <mxPoint x="577" y="610"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_orient_to_draw" value="單圖姿態" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#ffffff;fontSize=9;labelBackgroundColor=#000000;" parent="1" source="node_orient" target="node_draw" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="50" y="350"/>
+                            <mxPoint x="50" y="710"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_scene_to_viz" value="室內外判定" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.8;entryY=0;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#ffffff;fontSize=9;labelBackgroundColor=#000000;" parent="1" source="node_scene" target="node_viz" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_motion_to_draw" value="運動與光流" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.217;entryY=0.3;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#ffffff;fontSize=9;labelBackgroundColor=#000000;entryPerimeter=0;" parent="1" source="node_motion" target="box7" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_depth_to_draw" value="相對深度" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.85;entryY=0;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#ffffff;fontSize=9;labelBackgroundColor=#000000;" parent="1" source="node_depth" target="node_draw" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="650" y="640"/>
+                            <mxPoint x="423" y="640"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_draw_to_viz" value="" style="rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;" parent="1" source="node_draw" target="node_viz" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_viz_to_out" value="渲染影像幀" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;fontColor=#ffffff;fontSize=9;labelBackgroundColor=#000000;" parent="1" source="node_viz" target="node_out" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_out_to_output" value="" style="rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#FFFFFF;strokeWidth=1.5;" parent="1" source="node_out" target="node_output" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
