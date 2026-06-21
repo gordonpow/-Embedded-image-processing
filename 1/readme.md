@@ -103,7 +103,7 @@
 >
 >| | 說明 |
 >|---|---|
->| **什麼** | • 預設 conf=0.35：true positive ~70%，false positive ~5–10% <br> • 達精度與召回最佳平衡 <br> • 2100 個候選框 → 50~150 個有效框進入視覺化 |
+>| **什麼** | • 預設 conf=0.35：true positive 約 70%，false positive 5% 至 10% <br> • 達精度與召回最佳平衡 <br> • 2100 個候選框 → 50 至 150 個有效框進入視覺化 |
 >| **為什麼** | • 模型輸出 2100 個候選框，大多數無效（背景雜訊、紅衣服、反光物體等） <br> • 直接繪製所有框會掩蓋真實偵測，造成視覺混亂 <br> • 需要篩選出高置信度的真正火煙目標 |
 >| **如何** | • 提取最大類別分數：`confidences = scores.max(axis=1)` <br> • 建立過濾遮罩：`mask = confidences >= conf_thres` <br> • 保留高分框：`boxes_filtered = boxes[mask]` <br> • 執行 NMS 去重疊：`cv2.dnn.NMSBoxes(boxes, scores, conf_thres, iou_thres)` |
 >| **函數參數** | `scores.max(axis=1)` 與 `scores.argmax(axis=1)` <br> • `axis=1`: 沿著通道/類別的維度進行計算。在 YOLO 輸出格式 `[2100, 2]` 中，`nc=2` 為類別分值。使用 `axis=1` 取每框在 fire/smoke 類別中的最大值作為其最終信度分數，並取索引作為預測類別（`0` 為 fire，`1` 為 smoke）。 <br><br> `cv2.dnn.NMSBoxes(b, c, self.conf_thres, self.iou_thres)` <br> • `b`: 反算回原圖尺寸後的檢測框列表 `xyxy_orig`。 <br> • `c`: 對應檢測框的置信度分數列表。 <br> • `self.conf_thres = 0.35`: 置信度過濾閾值（預設 `0.35`）。小於此值的預測會被直接丟棄。 <br> • `self.iou_thres = 0.45`: IoU 抑制閾值。當兩個同類檢測框的重疊率大於 45% 時，非極大值抑制（NMS）會抑制掉信度較低者，避免對同一目標繪製多個重複框。 <br> • 程式碼中使用 `for cls in range(nc)` 進行 Per-class NMS：因火焰和煙霧經常重疊出現，分開類別獨立做 NMS 可避免高分煙霧框誤把鄰近的火焰框壓制抹除。 |
